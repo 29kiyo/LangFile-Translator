@@ -6,6 +6,11 @@ const api: Api = {
   setSettings: (patch) => ipcRenderer.invoke(IPC.setSettings, patch),
   getLocale: () => ipcRenderer.invoke(IPC.getLocale),
   testProvider: (p) => ipcRenderer.invoke(IPC.testProvider, p),
+  translate: (req) => ipcRenderer.invoke(IPC.translate, req),
+  cancelTranslate: () => ipcRenderer.invoke(IPC.cancelTranslate),
+  onTranslateProgress: (cb) => {
+    ipcRenderer.on(IPC.translateProgress, (_e, p) => cb(p))
+  },
   getOutputDir: () => ipcRenderer.invoke(IPC.getOutputDir),
   openFiles: () => ipcRenderer.invoke(IPC.openFiles),
   chooseDir: () => ipcRenderer.invoke(IPC.chooseDir),

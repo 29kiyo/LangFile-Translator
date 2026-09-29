@@ -255,8 +255,12 @@ export function initProviders(t: (key: string) => string): { render: () => void 
     form.hidden = true
   })
 
+  const dist = $<HTMLInputElement>('dist-enabled')
+  dist.addEventListener('change', () => void window.api.setSettings({ distribution: { enabled: dist.checked } }))
+
   void window.api.getSettings().then((s) => {
     providers = s.providers ?? []
+    dist.checked = s.distribution?.enabled ?? false
     render()
   })
 

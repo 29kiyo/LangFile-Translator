@@ -85,6 +85,7 @@ $('btn-pick').addEventListener('click', async () => {
     $('list-title').hidden = !multi
     list.hidden = !multi
     $('btn-download').hidden = multi
+    $('tr-bar').hidden = multi
     renderList()
   })
 
@@ -105,6 +106,55 @@ $('btn-pick').addEventListener('click', async () => {
     }
     const saved = await window.api.saveFile(currentName || 'output.json', text)
     status.textContent = t('editor.saved') + saved
+  })
+
+  // --- 翻訳 (phase4) ---
+  const langTo = $<HTMLSelectElement>('lang-to')
+  const trMode = $<HTMLSelectElement>('tr-mode')
+  const trIgnore = $<HTMLInputElement>('tr-ignore')
+  const trStatus = $('tr-status')
+  const btnTr = $<HTMLButtonElement>('btn-translate')
+  const btnCancel = $<HTMLButtonElement>('btn-cancel')
+  const modeValue = (): 'structure' | 'keys' => (trMode.value === 'keys' ? 'keys' : 'structure')
+
+  void window.api.getSettings().then((s) => {
+    langTo.value = s.targetLang
+    trMode.value = s.translateMode
+    trIgnore.value = s.ignoreKeys
+  })
+  langTo.addEventListener('change', () => void window.api.setSettings({ targetLang: langTo.value }))
+  trMode.addEventListener('change', () => void window.api.setSettings({ translateMode: modeValue() }))
+  trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
+
+  window.api.onTranslateProgress((p) => {
+    trStatus.textContent = `${t('tr.progress')} ${p.done}/${p.total}`
+  })
+  btnCancel.addEventListener('click', () => void window.api.cancelTranslate())
+  btnTr.addEventListener('click', async () => {
+    const src = left.getValue()
+    if (!src.trim()) {
+      trStatus.textContent = t('tr.noSource')
+      return
+    }
+    btnTr.disabled = true
+    btnCancel.hidden = false
+    trStatus.textContent = t('tr.running')
+    const r = await window.api.translate({
+      text: src,
+      mode: modeValue(),
+      ignoreKeys: trIgnore.value,
+      from: 'auto',
+      to: langTo.value
+    })
+    btnTr.disabled = false
+    btnCancel.hidden = true
+    if (r.ok) {
+      right.setValue(r.text)
+      trStatus.textContent =
+        t('tr.done') + (r.warnings ? ` (${t('tr.warnings')}: ${r.warnings})` : '') + (r.message ? ` [${r.message}]` : '')
+    } else {
+      trStatus.textContent = r.cancelled ? t('tr.cancelled') : `${t('tr.failed')}: ${r.message}`
+    }
   })
 
   const overlay = $('drop-overlay')

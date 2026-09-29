@@ -1,7 +1,16 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { basename, extname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { DEFAULT_SETTINGS, IPC, type Provider, type Settings, type TestResult } from '@shared/types'
+import {
+  DEFAULT_SETTINGS,
+  IPC,
+  type Provider,
+  type Settings,
+  type TestResult,
+  type TranslateRequest,
+  type TranslateResult
+} from '@shared/types'
+import { translateJson } from './translate/engine'
 
 const settingsPath = join(app.getPath('userData'), 'settings.json')
 let win: BrowserWindow | null = null
@@ -107,6 +116,44 @@ async function testProvider(p: Provider): Promise<TestResult> {
   }
 }
 
+let job: AbortController | null = null
+
+async function runTranslate(req: TranslateRequest): Promise<TranslateResult> {
+  if (job) return { ok: false, text: '', message: 'Another translation is running', warnings: 0 }
+  const ac = new AbortController()
+  job = ac
+  const providers = settings.providers.filter((p) => p.enabled)
+  const dist = settings.distribution.enabled
+  logCommand(
+    `translate ${req.mode} ${req.from} -> ${req.to} (providers: ${providers.map((p) => p.name).join(' > ') || 'none'}${dist ? ', distribution' : ''})`
+  )
+  try {
+    const r = await translateJson(req.text, {
+      providers,
+      distribution: dist,
+      mode: req.mode,
+      ignoreKeys: req.ignoreKeys,
+      from: req.from,
+      to: req.to,
+      signal: ac.signal,
+      onProgress: (done, total) => win?.webContents.send(IPC.translateProgress, { done, total }),
+      log: logCommand
+    })
+    logCommand(`translate done (untranslated: ${r.warnings}, used: ${r.used.join(', ') || '-'})`)
+    return { ok: true, text: r.text, message: r.used.join(', '), warnings: r.warnings }
+  } catch (e) {
+    if (ac.signal.aborted) {
+      logCommand('translate cancelled')
+      return { ok: false, cancelled: true, text: '', message: 'cancelled', warnings: 0 }
+    }
+    const msg = (e as Error).message
+    logCommand(`translate failed: ${msg}`)
+    return { ok: false, text: '', message: msg, warnings: 0 }
+  } finally {
+    job = null
+  }
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1200,
@@ -137,6 +184,10 @@ app.whenReady().then(() => {
   })
   ipcMain.handle(IPC.getLocale, () => app.getLocale())
   ipcMain.handle(IPC.testProvider, (_e, p: Provider) => testProvider(p))
+  ipcMain.handle(IPC.translate, (_e, req: TranslateRequest) => runTranslate(req))
+  ipcMain.handle(IPC.cancelTranslate, () => {
+    job?.abort()
+  })
   ipcMain.handle(IPC.getOutputDir, () => resolveOutputDir())
   ipcMain.handle(IPC.openFiles, async () => {
     const r = await dialog.showOpenDialog({

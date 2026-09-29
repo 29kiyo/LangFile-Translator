@@ -10,6 +10,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "paths": { "@shared/*": ["./src/shared/*"] }
   },
   "include": ["src", "electron.vite.config.ts"]

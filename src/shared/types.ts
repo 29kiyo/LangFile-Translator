@@ -35,6 +35,29 @@ export interface TestResult {
   models: string[]
 }
 
+export type TranslateMode = 'structure' | 'keys'
+
+export interface TranslateRequest {
+  text: string
+  mode: TranslateMode
+  ignoreKeys: string
+  from: string
+  to: string
+}
+
+export interface TranslateResult {
+  ok: boolean
+  cancelled?: boolean
+  text: string
+  message: string
+  warnings: number
+}
+
+export interface TranslateProgress {
+  done: number
+  total: number
+}
+
 export interface Settings {
   theme: Theme
   /** 'auto' = PCの言語に合わせる */
@@ -44,6 +67,9 @@ export interface Settings {
   outputDir: string
   providers: Provider[]
   distribution: DistributionSettings
+  translateMode: TranslateMode
+  ignoreKeys: string
+  targetLang: string
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -52,7 +78,10 @@ export const DEFAULT_SETTINGS: Settings = {
   showCommandLog: true,
   outputDir: '',
   providers: [],
-  distribution: { enabled: false }
+  distribution: { enabled: false },
+  translateMode: 'structure',
+  ignoreKeys: '',
+  targetLang: 'ja'
 }
 
 export interface PickedFile {
@@ -70,7 +99,10 @@ export const IPC = {
   saveFile: 'file:save',
   getOutputDir: 'app:output-dir',
   openFiles: 'dialog:open-files',
-  testProvider: 'provider:test'
+  testProvider: 'provider:test',
+  translate: 'translate:run',
+  cancelTranslate: 'translate:cancel',
+  translateProgress: 'translate:progress'
 } as const
 
 export interface Api {
@@ -81,6 +113,9 @@ export interface Api {
   getOutputDir(): Promise<string>
   openFiles(): Promise<PickedFile[]>
   testProvider(p: Provider): Promise<TestResult>
+  translate(req: TranslateRequest): Promise<TranslateResult>
+  cancelTranslate(): Promise<void>
+  onTranslateProgress(cb: (p: TranslateProgress) => void): void
   chooseDir(): Promise<string | null>
   saveFile(name: string, content: string): Promise<string>
 }

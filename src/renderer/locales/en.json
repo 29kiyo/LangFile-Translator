@@ -49,5 +49,20 @@
   "providers.testOk": "Connected",
   "providers.testFail": "Failed",
   "providers.models": "models",
-  "providers.urlRequired": "URL is required"
+  "providers.urlRequired": "URL is required",
+  "providers.distribution": "Distribute: translate in parallel with all enabled providers",
+  "tr.to": "Target language",
+  "tr.mode": "Translate mode",
+  "tr.mode.structure": "Keep structure (values only)",
+  "tr.mode.keys": "Translate keys too",
+  "tr.ignore": "Ignore keys",
+  "tr.run": "Translate",
+  "tr.cancel": "Cancel",
+  "tr.progress": "Progress",
+  "tr.noSource": "Enter or load source text first",
+  "tr.running": "Translating...",
+  "tr.done": "Done",
+  "tr.warnings": "untranslated",
+  "tr.cancelled": "Cancelled",
+  "tr.failed": "Failed"
 }

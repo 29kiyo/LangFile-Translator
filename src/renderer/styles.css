@@ -256,3 +256,18 @@ input[type='number'] {
   white-space: pre-wrap;
   font: 12px Consolas, monospace;
 }
+
+#tr-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+#tr-ignore {
+  width: 180px;
+}
+#tr-status {
+  font-size: 12px;
+  opacity: 0.8;
+}

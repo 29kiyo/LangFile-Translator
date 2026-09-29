@@ -31,6 +31,32 @@
             <button id="btn-clear" data-i18n="editor.clear"></button>
             <button id="btn-download" data-i18n="editor.download"></button>
           </div>
+          <div id="tr-bar">
+            <label for="lang-to" data-i18n="tr.to"></label>
+            <select id="lang-to">
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+              <option value="zh-CN">简体中文</option>
+              <option value="zh-TW">繁體中文</option>
+              <option value="ko">한국어</option>
+              <option value="es">Español</option>
+              <option value="fr">Français</option>
+              <option value="de">Deutsch</option>
+              <option value="it">Italiano</option>
+              <option value="pt-BR">Português (Brasil)</option>
+              <option value="ru">Русский</option>
+            </select>
+            <label for="tr-mode" data-i18n="tr.mode"></label>
+            <select id="tr-mode">
+              <option value="structure" data-i18n="tr.mode.structure"></option>
+              <option value="keys" data-i18n="tr.mode.keys"></option>
+            </select>
+            <label for="tr-ignore" data-i18n="tr.ignore"></label>
+            <input id="tr-ignore" type="text" placeholder="id,url" />
+            <button id="btn-translate" data-i18n="tr.run"></button>
+            <button id="btn-cancel" data-i18n="tr.cancel" hidden></button>
+            <span id="tr-status"></span>
+          </div>
           <div id="split">
             <div id="pane-left" class="pane">
               <div class="pane-title" data-i18n="editor.source"></div>
@@ -48,6 +74,10 @@
           <div class="row">
             <button id="btn-provider-add" data-i18n="providers.add"></button>
             <span class="hint" data-i18n="providers.hint"></span>
+          </div>
+          <div class="row">
+            <input type="checkbox" id="dist-enabled" />
+            <label for="dist-enabled" data-i18n="providers.distribution"></label>
           </div>
           <ul id="provider-list"></ul>
           <div id="provider-form" hidden>

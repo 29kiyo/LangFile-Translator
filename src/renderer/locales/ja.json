@@ -49,5 +49,20 @@
   "providers.testOk": "接続OK",
   "providers.testFail": "失敗",
   "providers.models": "モデル",
-  "providers.urlRequired": "URLを入力してください"
+  "providers.urlRequired": "URLを入力してください",
+  "providers.distribution": "分配: 有効なプロバイダーすべてで並列に翻訳",
+  "tr.to": "翻訳先",
+  "tr.mode": "翻訳モード",
+  "tr.mode.structure": "構造維持 (値のみ)",
+  "tr.mode.keys": "キーも翻訳",
+  "tr.ignore": "無視キー",
+  "tr.run": "翻訳",
+  "tr.cancel": "キャンセル",
+  "tr.progress": "進捗",
+  "tr.noSource": "先に原文を入力または読み込んでください",
+  "tr.running": "翻訳中...",
+  "tr.done": "完了",
+  "tr.warnings": "未翻訳",
+  "tr.cancelled": "キャンセルしました",
+  "tr.failed": "失敗"
 }
