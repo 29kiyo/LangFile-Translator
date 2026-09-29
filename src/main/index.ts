@@ -1,5 +1,5 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
-import { join } from 'path'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { basename, extname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { DEFAULT_SETTINGS, IPC, type Settings } from '@shared/types'
 
@@ -30,12 +30,28 @@ function saveSettings(s: Settings): void {
 
 let settings = loadSettings()
 
+function resolveOutputDir(): string {
+  return settings.outputDir || app.getPath('downloads')
+}
+
+/** 既存ファイルは上書きせず "name (1).json" のように連番を付ける */
+function uniquePath(dir: string, name: string): string {
+  const ext = extname(name)
+  const base = basename(name, ext)
+  let p = join(dir, name)
+  for (let i = 1; existsSync(p); i++) p = join(dir, `${base} (${i})${ext}`)
+  return p
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: false,
+    backgroundColor: settings.theme === 'dark' ? '#1e1e1e' : '#ffffff',
     webPreferences: { preload: join(__dirname, '../preload/index.js') }
   })
+  win.once('ready-to-show', () => win?.show())
   win.on('closed', () => {
     win = null
   })
@@ -56,6 +72,37 @@ app.whenReady().then(() => {
     return settings
   })
   ipcMain.handle(IPC.getLocale, () => app.getLocale())
+  ipcMain.handle(IPC.getOutputDir, () => resolveOutputDir())
+  ipcMain.handle(IPC.openFiles, async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [
+        { name: 'JSON / Text', extensions: ['json', 'txt', 'lang', 'properties'] },
+        { name: 'All', extensions: ['*'] }
+      ]
+    })
+    if (r.canceled) return []
+    logCommand(`open files ${r.filePaths.join(', ')}`)
+    return r.filePaths.map((p) => {
+      const buf = readFileSync(p)
+      return { name: basename(p), size: buf.length, text: buf.toString('utf-8') }
+    })
+  })
+  ipcMain.handle(IPC.chooseDir, async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'createDirectory'],
+      defaultPath: resolveOutputDir()
+    })
+    return r.canceled ? null : r.filePaths[0]
+  })
+  ipcMain.handle(IPC.saveFile, (_e, name: string, content: string) => {
+    const dir = resolveOutputDir()
+    mkdirSync(dir, { recursive: true })
+    const p = uniquePath(dir, basename(name))
+    writeFileSync(p, content, 'utf-8')
+    logCommand(`write file ${p}`)
+    return p
+  })
 
   createWindow()
   app.on('activate', () => {

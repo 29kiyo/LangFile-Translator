@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; worker-src 'self' blob:"
     />
     <title>json-translator</title>
   </head>
@@ -17,7 +17,32 @@
       </nav>
       <main>
         <section id="view-editor" class="view active">
-          <p data-i18n="placeholder.editor"></p>
+          <div id="drop-overlay" data-i18n="editor.dropHere"></div>
+          <div id="toolbar">
+            <button id="btn-pick" data-i18n="editor.pick"></button>
+            <input type="file" id="file-input" multiple hidden />
+            <label for="mode-select" data-i18n="editor.mode"></label>
+            <select id="mode-select">
+              <option value="single" data-i18n="editor.mode.single"></option>
+              <option value="multi" data-i18n="editor.mode.multi"></option>
+            </select>
+            <span id="file-name"></span>
+            <span class="spacer"></span>
+            <button id="btn-clear" data-i18n="editor.clear"></button>
+            <button id="btn-download" data-i18n="editor.download"></button>
+          </div>
+          <div id="split">
+            <div id="pane-left" class="pane">
+              <div class="pane-title" data-i18n="editor.source"></div>
+              <div id="editor-left" class="monaco-host"></div>
+            </div>
+            <div id="pane-right" class="pane">
+              <div id="title-right" class="pane-title" data-i18n="editor.output"></div>
+              <div id="editor-right" class="monaco-host"></div>
+              <div id="list-title" class="pane-title" hidden></div>
+              <ul id="file-list" hidden></ul>
+            </div>
+          </div>
         </section>
         <section id="view-providers" class="view">
           <p data-i18n="placeholder.providers"></p>
@@ -41,6 +66,12 @@
           <div class="row">
             <input type="checkbox" id="set-log" />
             <label for="set-log" data-i18n="settings.showLog"></label>
+          </div>
+          <div class="row">
+            <label data-i18n="settings.outputDir"></label>
+            <code id="out-dir"></code>
+            <button id="btn-outdir" data-i18n="settings.chooseDir"></button>
+            <button id="btn-outdir-reset" data-i18n="settings.resetDir"></button>
           </div>
         </section>
       </main>

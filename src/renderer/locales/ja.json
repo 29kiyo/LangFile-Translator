@@ -9,5 +9,21 @@
   "settings.theme.light": "ライト",
   "settings.language": "表示言語",
   "settings.lang.auto": "自動 (PCに合わせる)",
-  "settings.showLog": "実行中のコマンドを表示"
+  "settings.showLog": "実行中のコマンドを表示",
+  "settings.outputDir": "出力先フォルダ",
+  "settings.chooseDir": "変更...",
+  "settings.resetDir": "デフォルト (ダウンロード)",
+  "editor.pick": "ファイルを選択",
+  "editor.mode": "モード",
+  "editor.mode.single": "単体言語",
+  "editor.mode.multi": "複数言語",
+  "editor.clear": "クリア",
+  "editor.download": "ダウンロード",
+  "editor.source": "原文 (未翻訳)",
+  "editor.output": "出力",
+  "editor.dropHere": "ここにファイルをドロップ",
+  "editor.nothing": "ダウンロードする内容がありません",
+  "editor.saved": "保存しました: ",
+  "editor.resultList": "結果一覧",
+  "editor.resultEmpty": "翻訳結果がここに表示されます (Phase 5)"
 }

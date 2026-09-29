@@ -82,3 +82,101 @@ select {
 #log.hidden {
   display: none;
 }
+
+[hidden] {
+  display: none !important;
+}
+button {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+main {
+  min-height: 0;
+}
+#view-editor.active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  position: relative;
+}
+#toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+#toolbar .spacer {
+  flex: 1;
+}
+#split {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+  border: 1px solid var(--border);
+}
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+#pane-right {
+  border-left: 1px solid var(--border);
+}
+.pane-title {
+  font-size: 12px;
+  padding: 2px 8px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+.monaco-host {
+  flex: 1;
+  min-height: 0;
+}
+#file-list {
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  border: 1px solid var(--border);
+}
+#file-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+}
+#drop-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 20px;
+  background: rgba(10, 108, 255, 0.15);
+  border: 2px dashed var(--accent);
+}
+#drop-overlay.show {
+  display: flex;
+}
+
+#list-title {
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+#pane-right #file-list {
+  border: none;
+}
+#pane-right #list-title {
+  border: none;
+  border-bottom: 1px solid var(--border);
+}

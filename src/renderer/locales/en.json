@@ -9,5 +9,21 @@
   "settings.theme.light": "Light",
   "settings.language": "UI language",
   "settings.lang.auto": "Auto (follow PC)",
-  "settings.showLog": "Show running commands"
+  "settings.showLog": "Show running commands",
+  "settings.outputDir": "Output folder",
+  "settings.chooseDir": "Change...",
+  "settings.resetDir": "Default (Downloads)",
+  "editor.pick": "Select files",
+  "editor.mode": "Mode",
+  "editor.mode.single": "Single language",
+  "editor.mode.multi": "Multiple languages",
+  "editor.clear": "Clear",
+  "editor.download": "Download",
+  "editor.source": "Source (untranslated)",
+  "editor.output": "Output",
+  "editor.dropHere": "Drop files here",
+  "editor.nothing": "Nothing to download",
+  "editor.saved": "Saved: ",
+  "editor.resultList": "Results",
+  "editor.resultEmpty": "Translation results will appear here (Phase 5)"
 }

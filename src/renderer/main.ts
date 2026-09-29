@@ -2,6 +2,7 @@ import './styles.css'
 import enJson from './locales/en.json'
 import jaJson from './locales/ja.json'
 import type { Settings } from '@shared/types'
+let editorMod: typeof import('./editor') | null = null
 
 const en: Record<string, string> = enJson
 const builtin: Record<string, Record<string, string>> = { en, ja: jaJson }
@@ -20,6 +21,7 @@ function applyI18n(): void {
 
 async function applySettings(s: Settings): Promise<void> {
   document.documentElement.dataset.theme = s.theme
+  editorMod?.setEditorTheme(s.theme === 'dark')
   const code =
     s.uiLanguage === 'auto'
       ? (await window.api.getLocale()).toLowerCase().split('-')[0]
@@ -63,6 +65,28 @@ async function init(): Promise<void> {
   theme.addEventListener('change', () => update({ theme: theme.value as Settings['theme'] }))
   lang.addEventListener('change', () => update({ uiLanguage: lang.value }))
   showLog.addEventListener('change', () => update({ showCommandLog: showLog.checked }))
+
+  const outDir = $('out-dir')
+  const refreshOutDir = async (): Promise<void> => {
+    outDir.textContent = await window.api.getOutputDir()
+  }
+  $('btn-outdir').addEventListener('click', async () => {
+    const dir = await window.api.chooseDir()
+    if (dir) {
+      await update({ outputDir: dir })
+      await refreshOutDir()
+    }
+  })
+  $('btn-outdir-reset').addEventListener('click', async () => {
+    await update({ outputDir: '' })
+    await refreshOutDir()
+  })
+  await refreshOutDir()
+  void import('./editor').then((m) => {
+    editorMod = m
+    m.initEditor(t)
+    m.setEditorTheme(settings.theme === 'dark')
+  })
 
   await applySettings(settings)
 }
