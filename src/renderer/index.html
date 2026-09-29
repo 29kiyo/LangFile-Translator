@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+    />
+    <title>json-translator</title>
+  </head>
+  <body>
+    <div id="app">
+      <nav id="tabs">
+        <button data-view="editor" data-i18n="nav.editor" class="active"></button>
+        <button data-view="providers" data-i18n="nav.providers"></button>
+        <button data-view="settings" data-i18n="nav.settings"></button>
+      </nav>
+      <main>
+        <section id="view-editor" class="view active">
+          <p data-i18n="placeholder.editor"></p>
+        </section>
+        <section id="view-providers" class="view">
+          <p data-i18n="placeholder.providers"></p>
+        </section>
+        <section id="view-settings" class="view">
+          <div class="row">
+            <label for="set-theme" data-i18n="settings.theme"></label>
+            <select id="set-theme">
+              <option value="dark" data-i18n="settings.theme.dark"></option>
+              <option value="light" data-i18n="settings.theme.light"></option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="set-lang" data-i18n="settings.language"></label>
+            <select id="set-lang">
+              <option value="auto" data-i18n="settings.lang.auto"></option>
+              <option value="en">English</option>
+              <option value="ja">日本語</option>
+            </select>
+          </div>
+          <div class="row">
+            <input type="checkbox" id="set-log" />
+            <label for="set-log" data-i18n="settings.showLog"></label>
+          </div>
+        </section>
+      </main>
+      <pre id="log"></pre>
+    </div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

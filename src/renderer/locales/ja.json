@@ -1,0 +1,13 @@
+{
+  "nav.editor": "エディタ",
+  "nav.providers": "プロバイダー",
+  "nav.settings": "設定",
+  "placeholder.editor": "エディタ (Phase 2 で実装)",
+  "placeholder.providers": "プロバイダー (Phase 3 で実装)",
+  "settings.theme": "テーマ",
+  "settings.theme.dark": "ダーク",
+  "settings.theme.light": "ライト",
+  "settings.language": "表示言語",
+  "settings.lang.auto": "自動 (PCに合わせる)",
+  "settings.showLog": "実行中のコマンドを表示"
+}

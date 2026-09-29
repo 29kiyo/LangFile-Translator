@@ -1,0 +1,84 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1e1e1e;
+  --panel: #f3f3f3;
+  --border: #d0d0d0;
+  --accent: #0a6cff;
+}
+:root[data-theme='dark'] {
+  --bg: #1e1e1e;
+  --fg: #d4d4d4;
+  --panel: #252526;
+  --border: #3c3c3c;
+  --accent: #3794ff;
+}
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, 'Segoe UI', sans-serif;
+}
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+#tabs {
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+#tabs button {
+  background: none;
+  color: var(--fg);
+  border: 1px solid transparent;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+main {
+  flex: 1;
+  overflow: auto;
+  padding: 16px;
+}
+.view {
+  display: none;
+}
+.view.active {
+  display: block;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+select {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+#log {
+  height: 120px;
+  margin: 0;
+  overflow: auto;
+  padding: 6px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  font: 12px Consolas, monospace;
+  white-space: pre-wrap;
+}
+#log.hidden {
+  display: none;
+}

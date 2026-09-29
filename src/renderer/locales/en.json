@@ -1,0 +1,13 @@
+{
+  "nav.editor": "Editor",
+  "nav.providers": "Providers",
+  "nav.settings": "Settings",
+  "placeholder.editor": "Editor (coming in Phase 2)",
+  "placeholder.providers": "Providers (coming in Phase 3)",
+  "settings.theme": "Theme",
+  "settings.theme.dark": "Dark",
+  "settings.theme.light": "Light",
+  "settings.language": "UI language",
+  "settings.lang.auto": "Auto (follow PC)",
+  "settings.showLog": "Show running commands"
+}
