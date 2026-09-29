@@ -45,7 +45,55 @@
           </div>
         </section>
         <section id="view-providers" class="view">
-          <p data-i18n="placeholder.providers"></p>
+          <div class="row">
+            <button id="btn-provider-add" data-i18n="providers.add"></button>
+            <span class="hint" data-i18n="providers.hint"></span>
+          </div>
+          <ul id="provider-list"></ul>
+          <div id="provider-form" hidden>
+            <div class="row">
+              <label for="pf-type" data-i18n="providers.type"></label>
+              <select id="pf-type"></select>
+            </div>
+            <div class="row">
+              <label for="pf-name" data-i18n="providers.name"></label>
+              <input id="pf-name" type="text" />
+            </div>
+            <div class="row" id="pf-mode-row" hidden>
+              <label for="pf-mode" data-i18n="providers.mode"></label>
+              <select id="pf-mode">
+                <option value="api" data-i18n="providers.mode.api"></option>
+                <option value="local" data-i18n="providers.mode.local"></option>
+              </select>
+            </div>
+            <div class="row">
+              <label for="pf-url" data-i18n="providers.url"></label>
+              <input id="pf-url" type="text" />
+            </div>
+            <div class="row" id="pf-key-row">
+              <label for="pf-key" data-i18n="providers.apiKey"></label>
+              <input id="pf-key" type="password" autocomplete="off" />
+            </div>
+            <div class="row" id="pf-model-row">
+              <label for="pf-model" data-i18n="providers.model"></label>
+              <input id="pf-model" type="text" list="pf-models" />
+              <datalist id="pf-models"></datalist>
+            </div>
+            <div class="row">
+              <label for="pf-priority" data-i18n="providers.priority"></label>
+              <input id="pf-priority" type="number" min="1" />
+            </div>
+            <div class="row">
+              <input type="checkbox" id="pf-enabled" />
+              <label for="pf-enabled" data-i18n="providers.enabled"></label>
+            </div>
+            <div class="row">
+              <button id="pf-test" data-i18n="providers.test"></button>
+              <button id="pf-save" data-i18n="providers.save"></button>
+              <button id="pf-cancel" data-i18n="providers.cancel"></button>
+            </div>
+            <pre id="pf-result"></pre>
+          </div>
         </section>
         <section id="view-settings" class="view">
           <div class="row">

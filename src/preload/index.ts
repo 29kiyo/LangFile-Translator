@@ -5,6 +5,7 @@ const api: Api = {
   getSettings: () => ipcRenderer.invoke(IPC.getSettings),
   setSettings: (patch) => ipcRenderer.invoke(IPC.setSettings, patch),
   getLocale: () => ipcRenderer.invoke(IPC.getLocale),
+  testProvider: (p) => ipcRenderer.invoke(IPC.testProvider, p),
   getOutputDir: () => ipcRenderer.invoke(IPC.getOutputDir),
   openFiles: () => ipcRenderer.invoke(IPC.openFiles),
   chooseDir: () => ipcRenderer.invoke(IPC.chooseDir),

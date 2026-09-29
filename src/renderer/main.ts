@@ -2,7 +2,9 @@ import './styles.css'
 import enJson from './locales/en.json'
 import jaJson from './locales/ja.json'
 import type { Settings } from '@shared/types'
+import { initProviders } from './providers'
 let editorMod: typeof import('./editor') | null = null
+let providersUi: { render: () => void } | null = null
 
 const en: Record<string, string> = enJson
 const builtin: Record<string, Record<string, string>> = { en, ja: jaJson }
@@ -29,6 +31,7 @@ async function applySettings(s: Settings): Promise<void> {
   dict = builtin[code] ?? en
   document.documentElement.lang = builtin[code] ? code : 'en'
   applyI18n()
+  providersUi?.render()
   logEl.classList.toggle('hidden', !s.showCommandLog)
 }
 
@@ -82,6 +85,7 @@ async function init(): Promise<void> {
     await refreshOutDir()
   })
   await refreshOutDir()
+  providersUi = initProviders(t)
   void import('./editor').then((m) => {
     editorMod = m
     m.initEditor(t)

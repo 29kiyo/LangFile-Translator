@@ -120,6 +120,7 @@ $('btn-pick').addEventListener('click', async () => {
     'drop',
     (e) => {
       e.preventDefault()
+      if (!editorActive()) return
       e.stopPropagation()
       overlay.classList.remove('show')
       if (editorActive() && e.dataTransfer) void loadFiles(Array.from(e.dataTransfer.files))

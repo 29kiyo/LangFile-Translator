@@ -180,3 +180,79 @@ main {
   border: none;
   border-bottom: 1px solid var(--border);
 }
+
+input[type='text'],
+input[type='password'],
+input[type='number'] {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 4px 8px;
+}
+.hint {
+  opacity: 0.7;
+  font-size: 12px;
+}
+#provider-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  max-width: 760px;
+}
+#provider-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-bottom-width: 1px;
+  margin-bottom: -1px;
+}
+#provider-list li.empty {
+  opacity: 0.7;
+}
+#provider-list li.disabled {
+  opacity: 0.5;
+}
+#provider-list li.dragging {
+  opacity: 0.4;
+}
+#provider-list li.over-top {
+  border-top: 2px solid var(--accent);
+}
+#provider-list li.over-bottom {
+  border-bottom: 2px solid var(--accent);
+}
+#provider-list .handle {
+  cursor: grab;
+  user-select: none;
+}
+#provider-list .prio {
+  min-width: 28px;
+  opacity: 0.7;
+}
+#provider-list .pname {
+  flex: 1;
+  font-weight: 600;
+}
+#provider-list .meta {
+  opacity: 0.7;
+  font-size: 12px;
+}
+#provider-form {
+  border: 1px solid var(--border);
+  padding: 12px;
+  max-width: 640px;
+}
+#provider-form .row > label:first-child {
+  min-width: 110px;
+}
+#provider-form .row input:not([type='checkbox']),
+#provider-form .row select {
+  flex: 1;
+}
+#pf-result {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 12px Consolas, monospace;
+}

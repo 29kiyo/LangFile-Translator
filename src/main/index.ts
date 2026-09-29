@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { basename, extname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { DEFAULT_SETTINGS, IPC, type Settings } from '@shared/types'
+import { DEFAULT_SETTINGS, IPC, type Provider, type Settings, type TestResult } from '@shared/types'
 
 const settingsPath = join(app.getPath('userData'), 'settings.json')
 let win: BrowserWindow | null = null
@@ -43,6 +43,70 @@ function uniquePath(dir: string, name: string): string {
   return p
 }
 
+const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v : [])
+
+/** 接続テスト: モデル一覧 (または疎通確認用エンドポイント) を取得。APIキーはログに出さない */
+async function testProvider(p: Provider): Promise<TestResult> {
+  const base = p.baseUrl.replace(/\/+$/, '')
+  const key = p.apiKey
+  const headers: Record<string, string> = {}
+  let url = ''
+  switch (p.type) {
+    case 'lmstudio':
+      url = `${base}/models`
+      break
+    case 'openai':
+      url = `${base}/models`
+      headers.Authorization = `Bearer ${key}`
+      break
+    case 'ollama':
+      url = `${base}/api/tags`
+      break
+    case 'claude':
+      url = `${base}/models`
+      headers['x-api-key'] = key
+      headers['anthropic-version'] = '2023-06-01'
+      break
+    case 'gemini':
+      url = `${base}/models?pageSize=200&key=${encodeURIComponent(key)}`
+      break
+    case 'deepl':
+      url = `${base}/usage`
+      headers.Authorization = `DeepL-Auth-Key ${key}`
+      break
+    case 'google-translate':
+      url = `${base}/languages?target=en&key=${encodeURIComponent(key)}`
+      break
+    case 'libretranslate':
+      url = `${base}/languages`
+      break
+  }
+  logCommand(`test connection [${p.type}] GET ${url.split('?')[0]}`)
+  try {
+    const res = await fetch(url, { headers, signal: AbortSignal.timeout(10000) })
+    if (!res.ok) {
+      return { ok: false, message: `HTTP ${res.status} ${(await res.text()).slice(0, 200)}`, models: [] }
+    }
+    const json = (await res.json()) as Record<string, unknown>
+    let models: string[] = []
+    if (p.type === 'lmstudio' || p.type === 'openai' || p.type === 'claude') {
+      models = arr(json.data).map((m) => String(m.id))
+    } else if (p.type === 'ollama') {
+      models = arr(json.models).map((m) => String(m.name))
+    } else if (p.type === 'gemini') {
+      models = arr(json.models).map((m) => String(m.name).replace(/^models\//, ''))
+    }
+    return { ok: true, message: 'OK', models }
+  } catch (e) {
+    const err = e as Error & { cause?: { code?: string } }
+    return {
+      ok: false,
+      message: err.message + (err.cause?.code ? ` (${err.cause.code})` : ''),
+      models: []
+    }
+  }
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1200,
@@ -68,10 +132,11 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => {
     settings = { ...settings, ...patch }
     saveSettings(settings)
-    logCommand(`save settings ${JSON.stringify(patch)}`)
+    logCommand(`save settings: ${Object.keys(patch).join(', ')}`)
     return settings
   })
   ipcMain.handle(IPC.getLocale, () => app.getLocale())
+  ipcMain.handle(IPC.testProvider, (_e, p: Provider) => testProvider(p))
   ipcMain.handle(IPC.getOutputDir, () => resolveOutputDir())
   ipcMain.handle(IPC.openFiles, async () => {
     const r = await dialog.showOpenDialog({
