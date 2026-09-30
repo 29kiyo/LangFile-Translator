@@ -38,6 +38,8 @@ export interface TestResult {
 export type TranslateMode = 'structure' | 'keys'
 
 export interface TranslateRequest {
+  /** 行マーカー: 個別に無視 (marked) / 無視キーの一覧から個別に外す (released) 出現位置のパス */
+  marks?: { marked: string[]; released: string[] }
   text: string
   mode: TranslateMode
   ignoreKeys: string

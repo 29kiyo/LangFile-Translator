@@ -5,6 +5,7 @@ import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
 import { initLangPicker } from './langpicker'
 import { initResults } from './results'
+import { isIgnoredId, scanKeys, type KeyEntry } from '@shared/keyscan'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
   getWorker: (_id, label) => (label === 'json' ? new jsonWorker() : new editorWorker())
@@ -28,7 +29,7 @@ export function initEditor(t: (key: string) => string): void {
     dropIntoEditor: { enabled: false },
     fontSize: 13
   }
-  const left = monaco.editor.create($('editor-left'), options)
+  const left = monaco.editor.create($('editor-left'), { ...options, glyphMargin: true })
   const right = monaco.editor.create($('editor-right'), options)
 
   let currentName = ''
@@ -49,6 +50,7 @@ export function initEditor(t: (key: string) => string): void {
     const f = picked[0]
     if (!f) return
     left.setValue(await f.text())
+    clearMarks()
     right.setValue('')
     currentName = f.name
     setLang(f.name)
@@ -79,6 +81,7 @@ $('btn-pick').addEventListener('click', async () => {
     left.setValue('')
     right.setValue('')
     currentName = ''
+    clearMarks()
     res.clear()
     renderList()
     status.textContent = ''
@@ -105,6 +108,7 @@ $('btn-pick').addEventListener('click', async () => {
   void window.api.getSettings().then((s) => {
     trMode.value = s.translateMode
     trIgnore.value = s.ignoreKeys
+    refreshFixed()
   })
   trMode.addEventListener('change', () => void window.api.setSettings({ translateMode: modeValue() }))
   trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
@@ -138,6 +142,7 @@ $('btn-pick').addEventListener('click', async () => {
       text: src,
       mode: modeValue(),
       ignoreKeys: trIgnore.value,
+      marks: marksPayload(),
       from: 'auto',
       to: codes[0]
     })
@@ -152,13 +157,118 @@ $('btn-pick').addEventListener('click', async () => {
     }
   })
 
+  // --- 行マーカーによる無視キー (phase6) ---
+  // 赤い点は「行 (出現位置) 単位」で管理する (無視キーの一覧 #tr-ignore とは同期しない)
+  //  - 一覧に載っているキー: 全ての出現位置に点が出る。点のクリックでその行だけ外せる (released)
+  //  - 一覧にないキー: 点をクリックした行だけが対象 (marked)
+  // 判定規則は shared/keyscan.ts (翻訳エンジンと共通)。点の状態はセッション中のみ保持する
+  const marks = { marked: new Set<string>(), released: new Set<string>() }
+  const keyList = (): Set<string> =>
+    new Set(
+      trIgnore.value
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean)
+    )
+  const clearMarks = (): void => {
+    marks.marked.clear()
+    marks.released.clear()
+  }
+  const marksPayload = (): { marked: string[]; released: string[] } | undefined =>
+    marks.marked.size || marks.released.size
+      ? { marked: [...marks.marked], released: [...marks.released] }
+      : undefined
+
+  // 行 -> その行のキー (1行にキーがちょうど1つの行だけ。minify 形式などは点なし)
+  let lineEntries = new Map<number, KeyEntry>()
+  const rescan = (): void => {
+    const byLine = new Map<number, KeyEntry[]>()
+    for (const e of scanKeys(left.getValue())) {
+      const a = byLine.get(e.line)
+      if (a) a.push(e)
+      else byLine.set(e.line, [e])
+    }
+    lineEntries = new Map()
+    for (const [ln, a] of byLine) if (a.length === 1) lineEntries.set(ln, a[0])
+  }
+
+  const dot = (line: number, key: string, on: boolean): monaco.editor.IModelDeltaDecoration => ({
+    range: new monaco.Range(line, 1, line, 1),
+    options: {
+      glyphMarginClassName: on ? 'ign-dot' : 'ign-dot hover',
+      glyphMarginHoverMessage: { value: `${t(on ? 'ign.remove' : 'ign.add')}: \`${key.replace(/`/g, "'")}\`` }
+    }
+  })
+
+  const fixedDeco = left.createDecorationsCollection()
+  const hoverDeco = left.createDecorationsCollection()
+  let hoverLine = 0
+
+  const drawFixed = (): void => {
+    const ign = keyList()
+    const list: monaco.editor.IModelDeltaDecoration[] = []
+    for (const [ln, e] of lineEntries) if (isIgnoredId(e.key, e.id, ign, marks)) list.push(dot(ln, e.key, true))
+    fixedDeco.set(list)
+  }
+  const drawHover = (): void => {
+    const e = lineEntries.get(hoverLine)
+    hoverDeco.set(e && !isIgnoredId(e.key, e.id, keyList(), marks) ? [dot(hoverLine, e.key, false)] : [])
+  }
+  const redraw = (): void => {
+    drawFixed()
+    drawHover()
+  }
+  const refreshFixed = (): void => {
+    rescan()
+    redraw()
+  }
+
+  const toggleLine = (line: number): void => {
+    const e = lineEntries.get(line)
+    if (!e) return
+    const ign = keyList()
+    const on = isIgnoredId(e.key, e.id, ign, marks)
+    if (ign.has(e.key)) {
+      // 一覧のキー: その行だけ外す / 戻す
+      marks.marked.delete(e.id)
+      if (on) marks.released.add(e.id)
+      else marks.released.delete(e.id)
+    } else if (on) marks.marked.delete(e.id)
+    else marks.marked.add(e.id)
+    redraw()
+  }
+
+  left.onMouseMove((e) => {
+    const n = e.target.position?.lineNumber ?? 0
+    if (n !== hoverLine) {
+      hoverLine = n
+      drawHover()
+    }
+  })
+  left.onMouseLeave(() => {
+    hoverLine = 0
+    drawHover()
+  })
+  left.onMouseDown((e) => {
+    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && e.target.position) {
+      toggleLine(e.target.position.lineNumber)
+    }
+  })
+  trIgnore.addEventListener('input', redraw)
+  let markTimer = 0
+  left.onDidChangeModelContent(() => {
+    window.clearTimeout(markTimer)
+    markTimer = window.setTimeout(refreshFixed, 150)
+  })
+  document.addEventListener('i18n-changed', refreshFixed)
+
   // --- 複数言語 (phase5) ---
   const picker = initLangPicker(t)
   picker.onChange(applyMode)
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,
-    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value })
+    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value, marks: marksPayload() })
   })
 
   const overlay = $('drop-overlay')

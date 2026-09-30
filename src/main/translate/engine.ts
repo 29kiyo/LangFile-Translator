@@ -1,4 +1,5 @@
 import type { Provider } from '@shared/types'
+import type { Marks } from '../../shared/keyscan.ts'
 import type { Adapter } from './adapters.ts'
 import { BadFormatError, createAdapter } from './adapters.ts'
 import type { Mode } from './core.ts'
@@ -9,6 +10,8 @@ export interface EngineOptions {
   distribution: boolean
   mode: Mode
   ignoreKeys: string
+  /** 行マーカーによる個別の無視 / 解除 (出現位置単位) */
+  marks?: Marks
   from: string
   to: string
   signal: AbortSignal
@@ -56,7 +59,7 @@ export async function translateJson(text: string, o: EngineOptions): Promise<Eng
   const maxItems = Math.min(...[...adapters.values()].map((a) => a.maxItems))
   const maxChars = Math.min(...[...adapters.values()].map((a) => a.maxChars))
 
-  const ex = extract(json, o.mode, parseIgnoreKeys(o.ignoreKeys))
+  const ex = extract(json, o.mode, parseIgnoreKeys(o.ignoreKeys), o.marks)
   const prot = ex.texts.map(protect)
   const batches = makeBatches(
     prot.map((x) => x.text),

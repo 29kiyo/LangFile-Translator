@@ -139,6 +139,7 @@ async function runTranslate(req: TranslateRequest): Promise<TranslateResult> {
       distribution: dist,
       mode: req.mode,
       ignoreKeys: req.ignoreKeys,
+      marks: req.marks && { marked: new Set(req.marks.marked), released: new Set(req.marks.released) },
       from: req.from,
       to: req.to,
       signal: ac.signal,

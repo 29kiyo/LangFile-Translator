@@ -63,6 +63,8 @@
   "tr.failed": "失敗",
   "tr.language": "言語",
   "tr.selectLang": "言語を1つ以上選んでください",
+  "ign.add": "この行のキーを翻訳しない",
+  "ign.remove": "この行のキーを翻訳対象に戻す",
   "lang.title": "対象言語",
   "lang.search": "検索 (名前またはコード。例: ja_jp)",
   "lang.selectShown": "表示中を全選択",

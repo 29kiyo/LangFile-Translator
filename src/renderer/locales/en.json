@@ -63,6 +63,8 @@
   "tr.failed": "Failed",
   "tr.language": "Language",
   "tr.selectLang": "Select at least one language",
+  "ign.add": "Don't translate this line's key",
+  "ign.remove": "Translate this line's key again",
   "lang.title": "Target languages",
   "lang.search": "Search (name or code, e.g. ja_jp)",
   "lang.selectShown": "Select shown",

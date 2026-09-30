@@ -613,3 +613,19 @@ input[type='checkbox'].switch:checked::after {
   background: var(--muted);
   background-clip: content-box;
 }
+
+/* 行マーカー (無視キー): 行番号の左の赤い点。hover は薄く、固定は濃く */
+.ign-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #e5484d;
+}
+.ign-dot.hover::before {
+  opacity: 0.4;
+}

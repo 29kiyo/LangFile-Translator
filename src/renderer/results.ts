@@ -19,7 +19,7 @@ interface Result {
 export interface ResultsDeps {
   getSource(): string
   getSourceName(): string
-  getOptions(): { mode: 'structure' | 'keys'; ignoreKeys: string }
+  getOptions(): { mode: 'structure' | 'keys'; ignoreKeys: string; marks?: { marked: string[]; released: string[] } }
 }
 
 export interface ResultsApi {
@@ -228,6 +228,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
         text: src,
         mode: opt.mode,
         ignoreKeys: opt.ignoreKeys,
+        marks: opt.marks,
         from: 'auto',
         to: r.code
       })

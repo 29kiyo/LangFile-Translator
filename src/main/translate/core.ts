@@ -1,3 +1,6 @@
+import type { KeyPath, Marks } from '../../shared/keyscan.ts'
+import { isIgnored } from '../../shared/keyscan.ts'
+
 export type Mode = 'structure' | 'keys'
 
 const HAS_LETTER = /\p{L}/u
@@ -22,17 +25,25 @@ function put(o: Record<string, unknown>, k: string, v: unknown): void {
   Object.defineProperty(o, k, { value: v, enumerable: true, writable: true, configurable: true })
 }
 
-function walk(node: unknown, mode: Mode, ignore: Set<string>, fn: (s: string) => string): unknown {
+function walk(
+  node: unknown,
+  mode: Mode,
+  ignore: Set<string>,
+  fn: (s: string) => string,
+  marks?: Marks,
+  path: KeyPath = []
+): unknown {
   if (typeof node === 'string') return fn(node)
-  if (Array.isArray(node)) return node.map((n) => walk(n, mode, ignore, fn))
+  if (Array.isArray(node)) return node.map((n, i) => walk(n, mode, ignore, fn, marks, marks ? [...path, i] : path))
   if (node !== null && typeof node === 'object') {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
-      const ignored = ignore.has(k)
+      const p = marks ? [...path, k] : path
+      const ignored = isIgnored(k, p, ignore, marks)
       let nk = !ignored && mode === 'keys' ? fn(k) : k
       if (hasOwn(out, nk)) nk = k
       while (hasOwn(out, nk)) nk += '_'
-      put(out, nk, ignored ? v : walk(v, mode, ignore, fn))
+      put(out, nk, ignored ? v : walk(v, mode, ignore, fn, marks, p))
     }
     return out
   }
@@ -43,16 +54,23 @@ function walk(node: unknown, mode: Mode, ignore: Set<string>, fn: (s: string) =>
 export function extract(
   json: unknown,
   mode: Mode,
-  ignore: Set<string>
+  ignore: Set<string>,
+  marks?: Marks
 ): { texts: string[]; build: (m: Map<string, string>) => unknown } {
   const uniq = new Set<string>()
-  walk(json, mode, ignore, (s) => {
-    if (isTranslatable(s)) uniq.add(s)
-    return s
-  })
+  walk(
+    json,
+    mode,
+    ignore,
+    (s) => {
+      if (isTranslatable(s)) uniq.add(s)
+      return s
+    },
+    marks
+  )
   return {
     texts: [...uniq],
-    build: (m) => walk(json, mode, ignore, (s) => (isTranslatable(s) ? (m.get(s) ?? s) : s))
+    build: (m) => walk(json, mode, ignore, (s) => (isTranslatable(s) ? (m.get(s) ?? s) : s), marks)
   }
 }
 
