@@ -65,6 +65,7 @@ export function initProviders(t: (key: string) => string): { render: () => void 
       meta.textContent = PROVIDER_PRESETS[p.type].label + (p.model ? ` / ${p.model}` : '')
       const en = document.createElement('input')
       en.type = 'checkbox'
+      en.className = 'switch'
       en.checked = p.enabled
       en.title = t('providers.enabled')
       const edit = document.createElement('button')
