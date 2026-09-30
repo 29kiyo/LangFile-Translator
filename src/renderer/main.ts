@@ -32,6 +32,7 @@ async function applySettings(s: Settings): Promise<void> {
   document.documentElement.lang = builtin[code] ? code : 'en'
   applyI18n()
   providersUi?.render()
+  document.dispatchEvent(new Event('i18n-changed'))
   logEl.classList.toggle('hidden', !s.showCommandLog)
 }
 
@@ -68,6 +69,13 @@ async function init(): Promise<void> {
   theme.addEventListener('change', () => update({ theme: theme.value as Settings['theme'] }))
   lang.addEventListener('change', () => update({ uiLanguage: lang.value }))
   showLog.addEventListener('change', () => update({ showCommandLog: showLog.checked }))
+
+  const nameStyle = $<HTMLSelectElement>('set-namestyle')
+  const bulk = $<HTMLSelectElement>('set-bulk')
+  nameStyle.value = settings.fileNameStyle
+  bulk.value = settings.bulkMethod
+  nameStyle.addEventListener('change', () => update({ fileNameStyle: nameStyle.value as Settings['fileNameStyle'] }))
+  bulk.addEventListener('change', () => update({ bulkMethod: bulk.value as Settings['bulkMethod'] }))
 
   const outDir = $('out-dir')
   const refreshOutDir = async (): Promise<void> => {

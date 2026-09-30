@@ -58,6 +58,19 @@ export interface TranslateProgress {
   total: number
 }
 
+export type NameStyle = 'full' | 'short'
+export type BulkMethod = 'zip' | 'folder'
+
+export interface BulkFile {
+  name: string
+  content: string
+}
+
+export interface BulkResult {
+  path: string
+  count: number
+}
+
 export interface Settings {
   theme: Theme
   /** 'auto' = PCの言語に合わせる */
@@ -70,6 +83,11 @@ export interface Settings {
   translateMode: TranslateMode
   ignoreKeys: string
   targetLang: string
+  /** ja_jp.json (full) / ja.json (short) */
+  fileNameStyle: NameStyle
+  bulkMethod: BulkMethod
+  /** 複数言語モードで選択中の言語コード */
+  targetLangs: string[]
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -81,7 +99,10 @@ export const DEFAULT_SETTINGS: Settings = {
   distribution: { enabled: false },
   translateMode: 'structure',
   ignoreKeys: '',
-  targetLang: 'ja'
+  targetLang: 'ja',
+  fileNameStyle: 'full',
+  bulkMethod: 'zip',
+  targetLangs: ['ja']
 }
 
 export interface PickedFile {
@@ -102,7 +123,8 @@ export const IPC = {
   testProvider: 'provider:test',
   translate: 'translate:run',
   cancelTranslate: 'translate:cancel',
-  translateProgress: 'translate:progress'
+  translateProgress: 'translate:progress',
+  saveBulk: 'file:save-bulk'
 } as const
 
 export interface Api {
@@ -116,6 +138,7 @@ export interface Api {
   translate(req: TranslateRequest): Promise<TranslateResult>
   cancelTranslate(): Promise<void>
   onTranslateProgress(cb: (p: TranslateProgress) => void): void
+  saveBulk(files: BulkFile[], zipName: string): Promise<BulkResult>
   chooseDir(): Promise<string | null>
   saveFile(name: string, content: string): Promise<string>
 }

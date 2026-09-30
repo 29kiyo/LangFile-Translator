@@ -32,8 +32,8 @@
             <button id="btn-download" data-i18n="editor.download"></button>
           </div>
           <div id="tr-bar">
-            <label for="lang-to" data-i18n="tr.to"></label>
-            <select id="lang-to">
+            <label for="lang-to" class="single-only" data-i18n="tr.to"></label>
+            <select id="lang-to" class="single-only">
               <option value="en">English</option>
               <option value="ja">日本語</option>
               <option value="zh-CN">简体中文</option>
@@ -61,6 +61,15 @@
             <div id="pane-left" class="pane">
               <div class="pane-title" data-i18n="editor.source"></div>
               <div id="editor-left" class="monaco-host"></div>
+            </div>
+            <div id="pane-lang" class="pane" hidden>
+              <div id="lang-title" class="pane-title"></div>
+              <div class="lang-tools">
+                <input id="lang-search" type="text" />
+                <button id="lang-all" data-i18n="lang.selectShown"></button>
+                <button id="lang-none" data-i18n="lang.clearAll"></button>
+              </div>
+              <ul id="lang-list"></ul>
             </div>
             <div id="pane-right" class="pane">
               <div id="title-right" class="pane-title" data-i18n="editor.output"></div>
@@ -144,6 +153,20 @@
           <div class="row">
             <input type="checkbox" id="set-log" />
             <label for="set-log" data-i18n="settings.showLog"></label>
+          </div>
+          <div class="row">
+            <label for="set-namestyle" data-i18n="settings.nameStyle"></label>
+            <select id="set-namestyle">
+              <option value="full">ja_jp.json</option>
+              <option value="short">ja.json</option>
+            </select>
+          </div>
+          <div class="row">
+            <label for="set-bulk" data-i18n="settings.bulkMethod"></label>
+            <select id="set-bulk">
+              <option value="zip">ZIP</option>
+              <option value="folder" data-i18n="settings.bulk.folder"></option>
+            </select>
           </div>
           <div class="row">
             <label data-i18n="settings.outputDir"></label>

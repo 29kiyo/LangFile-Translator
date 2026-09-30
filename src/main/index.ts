@@ -3,6 +3,7 @@ import { basename, extname, join } from 'path'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
 import {
   DEFAULT_SETTINGS,
+  type BulkFile,
   IPC,
   type Provider,
   type Settings,
@@ -11,6 +12,7 @@ import {
   type TranslateResult
 } from '@shared/types'
 import { translateJson } from './translate/engine'
+import { makeZip } from './zip'
 
 const settingsPath = join(app.getPath('userData'), 'settings.json')
 let win: BrowserWindow | null = null
@@ -210,6 +212,22 @@ app.whenReady().then(() => {
       defaultPath: resolveOutputDir()
     })
     return r.canceled ? null : r.filePaths[0]
+  })
+  ipcMain.handle(IPC.saveBulk, (_e, files: BulkFile[], zipName: string) => {
+    const dir = resolveOutputDir()
+    mkdirSync(dir, { recursive: true })
+    if (settings.bulkMethod === 'zip') {
+      const p = uniquePath(dir, basename(zipName))
+      writeFileSync(p, makeZip(files))
+      logCommand(`write zip ${p} (${files.length} files)`)
+      return { path: p, count: files.length }
+    }
+    for (const f of files) {
+      const p = uniquePath(dir, basename(f.name))
+      writeFileSync(p, f.content, 'utf-8')
+      logCommand(`write file ${p}`)
+    }
+    return { path: dir, count: files.length }
   })
   ipcMain.handle(IPC.saveFile, (_e, name: string, content: string) => {
     const dir = resolveOutputDir()

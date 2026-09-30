@@ -271,3 +271,100 @@ input[type='number'] {
   font-size: 12px;
   opacity: 0.8;
 }
+
+#split.multi {
+  grid-template-columns: 1fr 280px 1fr;
+}
+#pane-lang {
+  border-left: 1px solid var(--border);
+}
+.lang-tools {
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  border-bottom: 1px solid var(--border);
+}
+.lang-tools input {
+  flex: 1;
+  min-width: 0;
+}
+#lang-list {
+  flex: 1;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+}
+#lang-list label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 3px 10px;
+  cursor: pointer;
+}
+#lang-list label:hover {
+  background: var(--panel);
+}
+#lang-list .lc {
+  opacity: 0.65;
+  font-size: 11px;
+}
+#list-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#list-title .spacer {
+  flex: 1;
+}
+#file-list li.res {
+  display: block;
+  padding: 0;
+}
+.res-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.res-head:hover {
+  background: var(--panel);
+}
+.res-head .arrow {
+  width: 12px;
+}
+.res-head .rname {
+  font-weight: 600;
+  min-width: 110px;
+}
+.res-head .rmeta {
+  flex: 1;
+  opacity: 0.7;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.res-head .rstate {
+  font-size: 12px;
+}
+.rstate.done {
+  color: #2da44e;
+}
+.rstate.failed {
+  color: #e5484d;
+}
+.acc {
+  border-top: 1px solid var(--border);
+}
+.acc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px;
+  background: var(--panel);
+}
+.acc-editor {
+  height: 280px;
+}

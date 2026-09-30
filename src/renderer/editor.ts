@@ -3,6 +3,8 @@ import 'monaco-editor/editor/editor.main.js'
 import 'monaco-editor/language/json/monaco.contribution.js'
 import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
+import { fillLangSelect, initLangPicker } from './langpicker'
+import { initResults } from './results'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
   getWorker: (_id, label) => (label === 'json' ? new jsonWorker() : new editorWorker())
@@ -31,7 +33,7 @@ export function initEditor(t: (key: string) => string): void {
 
   let mode: 'single' | 'multi' = 'single'
   let currentName = ''
-  let results: { name: string; text: string }[] = []
+
 
   const status = $('file-name')
   const list = $<HTMLUListElement>('file-list')
@@ -43,20 +45,7 @@ export function initEditor(t: (key: string) => string): void {
     for (const ed of [left, right]) monaco.editor.setModelLanguage(ed.getModel()!, lang)
   }
 
-  const renderList = (): void => {
-    list.innerHTML = ''
-    $('list-title').textContent = `${t('editor.resultList')} (${results.length})`
-    if (results.length === 0) {
-      const li = document.createElement('li')
-      li.textContent = t('editor.resultEmpty')
-      list.appendChild(li)
-    }
-    for (const r of results) {
-      const li = document.createElement('li')
-      li.textContent = r.name
-      list.appendChild(li)
-    }
-  }
+  const renderList = (): void => res.render()
 
   const loadFiles = async (picked: File[]): Promise<void> => {
     const f = picked[0]
@@ -85,7 +74,10 @@ $('btn-pick').addEventListener('click', async () => {
     $('list-title').hidden = !multi
     list.hidden = !multi
     $('btn-download').hidden = multi
-    $('tr-bar').hidden = multi
+    document.querySelectorAll<HTMLElement>('.single-only').forEach((el) => (el.hidden = multi))
+    $('pane-lang').hidden = !multi
+    $('split').classList.toggle('multi', multi)
+    if (multi) picker.render()
     renderList()
   })
 
@@ -93,7 +85,7 @@ $('btn-pick').addEventListener('click', async () => {
     left.setValue('')
     right.setValue('')
     currentName = ''
-    results = []
+    res.clear()
     renderList()
     status.textContent = ''
   })
@@ -118,7 +110,7 @@ $('btn-pick').addEventListener('click', async () => {
   const modeValue = (): 'structure' | 'keys' => (trMode.value === 'keys' ? 'keys' : 'structure')
 
   void window.api.getSettings().then((s) => {
-    langTo.value = s.targetLang
+    fillLangSelect(langTo, s.targetLang)
     trMode.value = s.translateMode
     trIgnore.value = s.ignoreKeys
   })
@@ -127,13 +119,25 @@ $('btn-pick').addEventListener('click', async () => {
   trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
 
   window.api.onTranslateProgress((p) => {
-    trStatus.textContent = `${t('tr.progress')} ${p.done}/${p.total}`
+    trStatus.textContent = `${res.prefix()}${t('tr.progress')} ${p.done}/${p.total}`
   })
-  btnCancel.addEventListener('click', () => void window.api.cancelTranslate())
+  btnCancel.addEventListener('click', () => {
+    res.cancel()
+    void window.api.cancelTranslate()
+  })
   btnTr.addEventListener('click', async () => {
     const src = left.getValue()
     if (!src.trim()) {
       trStatus.textContent = t('tr.noSource')
+      return
+    }
+    if (mode === 'multi') {
+      const codes = picker.selected()
+      if (codes.length === 0) {
+        trStatus.textContent = t('tr.selectLang')
+        return
+      }
+      await res.start(codes)
       return
     }
     btnTr.disabled = true
@@ -155,6 +159,14 @@ $('btn-pick').addEventListener('click', async () => {
     } else {
       trStatus.textContent = r.cancelled ? t('tr.cancelled') : `${t('tr.failed')}: ${r.message}`
     }
+  })
+
+  // --- 複数言語 (phase5) ---
+  const picker = initLangPicker(t)
+  const res = initResults(t, {
+    getSource: () => left.getValue(),
+    getSourceName: () => currentName,
+    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value })
   })
 
   const overlay = $('drop-overlay')

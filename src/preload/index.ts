@@ -8,6 +8,7 @@ const api: Api = {
   testProvider: (p) => ipcRenderer.invoke(IPC.testProvider, p),
   translate: (req) => ipcRenderer.invoke(IPC.translate, req),
   cancelTranslate: () => ipcRenderer.invoke(IPC.cancelTranslate),
+  saveBulk: (files, zipName) => ipcRenderer.invoke(IPC.saveBulk, files, zipName),
   onTranslateProgress: (cb) => {
     ipcRenderer.on(IPC.translateProgress, (_e, p) => cb(p))
   },
