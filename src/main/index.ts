@@ -26,7 +26,11 @@ function logCommand(text: string): void {
 function loadSettings(): Settings {
   try {
     if (existsSync(settingsPath)) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(readFileSync(settingsPath, 'utf-8')) }
+      const raw = JSON.parse(readFileSync(settingsPath, 'utf-8')) as Partial<Settings> & { targetLang?: string }
+      const s: Settings = { ...DEFAULT_SETTINGS, ...raw }
+      // 旧バージョンの targetLang (単体言語の選択) を targetLangs に引き継ぐ
+      if (!Array.isArray(raw.targetLangs) && typeof raw.targetLang === 'string') s.targetLangs = [raw.targetLang]
+      return s
     }
   } catch {
     // 壊れている場合はデフォルトに戻す

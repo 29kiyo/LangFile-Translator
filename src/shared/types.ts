@@ -82,7 +82,6 @@ export interface Settings {
   distribution: DistributionSettings
   translateMode: TranslateMode
   ignoreKeys: string
-  targetLang: string
   /** ja_jp.json (full) / ja.json (short) */
   fileNameStyle: NameStyle
   bulkMethod: BulkMethod
@@ -99,7 +98,6 @@ export const DEFAULT_SETTINGS: Settings = {
   distribution: { enabled: false },
   translateMode: 'structure',
   ignoreKeys: '',
-  targetLang: 'ja',
   fileNameStyle: 'full',
   bulkMethod: 'zip',
   targetLangs: ['ja']

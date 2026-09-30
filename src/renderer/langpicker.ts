@@ -42,46 +42,40 @@ export function nativeName(code: string): string {
   return v
 }
 
-/** 単体言語モードの翻訳先 (全言語)。UI言語が変わったら名前を作り直す */
-export function fillLangSelect(sel: HTMLSelectElement, value: string): void {
-  const fill = (v: string): void => {
-    const names = nameMap(uiLocale())
-    sel.innerHTML = ''
-    for (const l of LANGUAGES) {
-      const o = document.createElement('option')
-      o.value = l.code
-      o.textContent = `${LABEL[l.code] ?? names.get(l.code)} (${l.code})`
-      sel.appendChild(o)
-    }
-    sel.value = v
-  }
-  fill(value)
-  document.addEventListener('i18n-changed', () => fill(sel.value))
-}
-
 export interface LangPicker {
   selected(): string[]
-  render(): void
+  onChange(cb: () => void): void
 }
 
-/** 複数言語モードの言語ピッカー (検索 + チェックボックス) */
+/** 対象言語のピッカー (アコーディオン + 枠付きグリッド + 検索)。単体・複数で共通 */
 export function initLangPicker(t: (key: string) => string): LangPicker {
-  const pane = $('pane-lang')
-  const list = $<HTMLUListElement>('lang-list')
-  const search = $<HTMLInputElement>('lang-search')
+  const head = $<HTMLButtonElement>('lang-head')
+  const arrow = $('lang-arrow')
   const title = $('lang-title')
+  const summary = $('lang-summary')
+  const body = $('lang-body')
+  const grid = $<HTMLUListElement>('lang-grid')
+  const search = $<HTMLInputElement>('lang-search')
 
   let selected = new Set<string>()
   let shown: string[] = []
   let ui = new Map<string, string>()
   let uiFor = ''
   let en = new Map<string, string>()
+  const listeners: (() => void)[] = []
 
-  const persist = (): void => {
-    void window.api.setSettings({ targetLangs: LANGUAGES.filter((l) => selected.has(l.code)).map((l) => l.code) })
+  const codes = (): string[] => LANGUAGES.filter((l) => selected.has(l.code)).map((l) => l.code)
+
+  const updateHead = (): void => {
+    const c = codes()
+    title.textContent = `${t('lang.title')} (${c.length})`
+    summary.textContent = c.length === 1 ? `${nativeName(c[0])} (${c[0]})` : c.join(', ')
   }
-  const updateTitle = (): void => {
-    title.textContent = `${t('lang.title')} (${selected.size})`
+  const notify = (): void => listeners.forEach((cb) => cb())
+  const changed = (): void => {
+    void window.api.setSettings({ targetLangs: codes() })
+    updateHead()
+    notify()
   }
 
   const render = (): void => {
@@ -102,53 +96,68 @@ export function initLangPicker(t: (key: string) => string): LangPicker {
         )
     )
     shown = hit.map((l) => l.code)
-    list.innerHTML = ''
+    grid.innerHTML = ''
     for (const l of hit) {
       const li = document.createElement('li')
       const label = document.createElement('label')
       const cb = document.createElement('input')
       cb.type = 'checkbox'
       cb.checked = selected.has(l.code)
+      const text = document.createElement('span')
+      text.className = 'ltext'
       const name = document.createElement('span')
+      name.className = 'lname'
       name.textContent = nativeName(l.code)
       const sub = document.createElement('span')
       sub.className = 'lc'
       const u = LABEL[l.code] ? '' : (ui.get(l.code) ?? '')
       sub.textContent = u && u !== name.textContent ? `${u} · ${l.code}` : l.code
-      label.append(cb, name, sub)
+      text.append(name, sub)
+      label.append(cb, text)
       li.appendChild(label)
-      list.appendChild(li)
+      grid.appendChild(li)
       cb.addEventListener('change', () => {
         if (cb.checked) selected.add(l.code)
         else selected.delete(l.code)
-        persist()
-        updateTitle()
+        changed()
       })
     }
-    updateTitle()
   }
 
+  const setOpen = (open: boolean): void => {
+    body.hidden = !open
+    arrow.textContent = open ? '▾' : '▸'
+    if (open) render()
+  }
+
+  head.addEventListener('click', () => setOpen(Boolean(body.hidden)))
   search.addEventListener('input', render)
   $('lang-all').addEventListener('click', () => {
     for (const c of shown) selected.add(c)
-    persist()
+    changed()
     render()
   })
   $('lang-none').addEventListener('click', () => {
     selected.clear()
-    persist()
+    changed()
     render()
   })
   document.addEventListener('i18n-changed', () => {
-    if (!pane.hidden) render()
-    else updateTitle()
+    updateHead()
+    if (!body.hidden) render()
   })
   void window.api.getSettings().then((s) => {
     selected = new Set(s.targetLangs ?? [])
-    if (!pane.hidden) render()
-    else updateTitle()
+    updateHead()
+    notify()
   })
-  updateTitle()
+  updateHead()
+  setOpen(false)
 
-  return { selected: () => LANGUAGES.filter((l) => selected.has(l.code)).map((l) => l.code), render }
+  return {
+    selected: codes,
+    onChange: (cb) => {
+      listeners.push(cb)
+    }
+  }
 }

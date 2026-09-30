@@ -3,7 +3,7 @@ import 'monaco-editor/editor/editor.main.js'
 import 'monaco-editor/language/json/monaco.contribution.js'
 import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
-import { fillLangSelect, initLangPicker } from './langpicker'
+import { initLangPicker } from './langpicker'
 import { initResults } from './results'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
@@ -31,14 +31,12 @@ export function initEditor(t: (key: string) => string): void {
   const left = monaco.editor.create($('editor-left'), options)
   const right = monaco.editor.create($('editor-right'), options)
 
-  let mode: 'single' | 'multi' = 'single'
   let currentName = ''
 
 
   const status = $('file-name')
   const list = $<HTMLUListElement>('file-list')
   const fileInput = $<HTMLInputElement>('file-input')
-  const modeSel = $<HTMLSelectElement>('mode-select')
 
   const setLang = (name: string): void => {
     const lang = name.toLowerCase().endsWith('.json') ? 'json' : 'plaintext'
@@ -66,20 +64,16 @@ $('btn-pick').addEventListener('click', async () => {
     fileInput.value = ''
   })
 
-  modeSel.addEventListener('change', () => {
-    mode = modeSel.value as 'single' | 'multi'
-    const multi = mode === 'multi'
+  /** 選択言語が2つ以上なら複数言語モード (右=結果一覧)、それ以外は単体 (右=出力エディタ) */
+  const applyMode = (): void => {
+    const multi = picker.selected().length >= 2
     $('editor-right').hidden = multi
     $('title-right').hidden = multi
     $('list-title').hidden = !multi
     list.hidden = !multi
     $('btn-download').hidden = multi
-    document.querySelectorAll<HTMLElement>('.single-only').forEach((el) => (el.hidden = multi))
-    $('pane-lang').hidden = !multi
-    $('split').classList.toggle('multi', multi)
-    if (multi) picker.render()
     renderList()
-  })
+  }
 
   $('btn-clear').addEventListener('click', () => {
     left.setValue('')
@@ -101,7 +95,6 @@ $('btn-pick').addEventListener('click', async () => {
   })
 
   // --- 翻訳 (phase4) ---
-  const langTo = $<HTMLSelectElement>('lang-to')
   const trMode = $<HTMLSelectElement>('tr-mode')
   const trIgnore = $<HTMLInputElement>('tr-ignore')
   const trStatus = $('tr-status')
@@ -110,11 +103,9 @@ $('btn-pick').addEventListener('click', async () => {
   const modeValue = (): 'structure' | 'keys' => (trMode.value === 'keys' ? 'keys' : 'structure')
 
   void window.api.getSettings().then((s) => {
-    fillLangSelect(langTo, s.targetLang)
     trMode.value = s.translateMode
     trIgnore.value = s.ignoreKeys
   })
-  langTo.addEventListener('change', () => void window.api.setSettings({ targetLang: langTo.value }))
   trMode.addEventListener('change', () => void window.api.setSettings({ translateMode: modeValue() }))
   trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
 
@@ -131,12 +122,12 @@ $('btn-pick').addEventListener('click', async () => {
       trStatus.textContent = t('tr.noSource')
       return
     }
-    if (mode === 'multi') {
-      const codes = picker.selected()
-      if (codes.length === 0) {
-        trStatus.textContent = t('tr.selectLang')
-        return
-      }
+    const codes = picker.selected()
+    if (codes.length === 0) {
+      trStatus.textContent = t('tr.selectLang')
+      return
+    }
+    if (codes.length >= 2) {
       await res.start(codes)
       return
     }
@@ -148,7 +139,7 @@ $('btn-pick').addEventListener('click', async () => {
       mode: modeValue(),
       ignoreKeys: trIgnore.value,
       from: 'auto',
-      to: langTo.value
+      to: codes[0]
     })
     btnTr.disabled = false
     btnCancel.hidden = true
@@ -163,6 +154,7 @@ $('btn-pick').addEventListener('click', async () => {
 
   // --- 複数言語 (phase5) ---
   const picker = initLangPicker(t)
+  picker.onChange(applyMode)
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,

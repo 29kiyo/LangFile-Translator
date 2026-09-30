@@ -290,43 +290,6 @@ input[type='number'] {
   opacity: 0.8;
 }
 
-#split.multi {
-  grid-template-columns: 1fr 280px 1fr;
-}
-#pane-lang {
-  border-left: 1px solid var(--border);
-}
-.lang-tools {
-  display: flex;
-  gap: 6px;
-  padding: 6px;
-  border-bottom: 1px solid var(--border);
-}
-.lang-tools input {
-  flex: 1;
-  min-width: 0;
-}
-#lang-list {
-  flex: 1;
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow: auto;
-}
-#lang-list label {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 3px 10px;
-  cursor: pointer;
-}
-#lang-list label:hover {
-  background: var(--panel);
-}
-#lang-list .lc {
-  opacity: 0.65;
-  font-size: 11px;
-}
 #list-title {
   display: flex;
   align-items: center;
@@ -502,9 +465,6 @@ input[type='checkbox'].switch:checked::after {
   border-top: 1px solid var(--border);
   padding: 12px 0;
 }
-#lang-list label {
-  align-items: center;
-}
 
 /* プルダウン: 本体と開いたリストの両方を角丸にする (Chromium 135+) */
 @supports (appearance: base-select) {
@@ -539,4 +499,117 @@ input[type='checkbox'].switch:checked::after {
   select option::checkmark {
     display: none;
   }
+}
+
+/* 言語ピッカー (アコーディオン) */
+#lang-picker {
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+#lang-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 4px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-radius: 0;
+}
+#lang-head:hover:not(:disabled) {
+  background: var(--hover);
+}
+#lang-arrow {
+  width: 12px;
+}
+#lang-title {
+  font-weight: 600;
+}
+#lang-summary {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#lang-body {
+  padding: 4px 0 10px;
+}
+.lang-tools {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.lang-tools input {
+  flex: 1;
+  min-width: 0;
+}
+#lang-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+  max-height: 38vh;
+  overflow: auto;
+}
+#lang-grid label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+#lang-grid label:hover {
+  background: var(--hover);
+}
+#lang-grid label:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+#lang-grid .ltext {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+#lang-grid .lname,
+#lang-grid .lc {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#lang-grid .lc {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+/* スクロールバー: 細く、背景は透明、つまみは角丸 */
+:root {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 2px solid transparent;
+  border-radius: 6px;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: content-box;
 }
