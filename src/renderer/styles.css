@@ -691,3 +691,50 @@ input[type='checkbox'].switch:checked::after {
   padding: 0 8px;
   font-size: 12px;
 }
+
+/* 設定画面: 見出しで区切る */
+#view-settings {
+  max-width: 760px;
+}
+#view-settings h2 {
+  margin: 24px 0 12px;
+  padding-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border);
+}
+#view-settings h2:first-child {
+  margin-top: 0;
+}
+#view-settings .row > label:first-child {
+  min-width: 170px;
+}
+#view-settings .hint {
+  margin: -4px 0 12px;
+}
+#uil-list {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+#uil-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+}
+#uil-list .uname {
+  flex: 1;
+  font-weight: 600;
+}
+#uil-list .umeta {
+  color: var(--muted);
+  font-size: 12px;
+}
+#uil-result {
+  margin: 8px 0 0;
+  white-space: pre-wrap;
+  font: 12px Consolas, monospace;
+}

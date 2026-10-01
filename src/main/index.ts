@@ -1,9 +1,11 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { basename, extname, join } from 'path'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'fs'
 import {
   DEFAULT_SETTINGS,
   type BulkFile,
+  type SaveLocaleRequest,
+  type SaveLocaleResult,
   IPC,
   type Provider,
   type Settings,
@@ -12,6 +14,7 @@ import {
   type TranslateResult
 } from '@shared/types'
 import { translateJson } from './translate/engine'
+import { isLocaleCode } from '@shared/locale-file'
 import { makeZip } from './zip'
 import iconIco from '../../build/icon.ico?asset'
 import iconPng from '../../build/icon.png?asset'
@@ -164,6 +167,36 @@ async function runTranslate(req: TranslateRequest): Promise<TranslateResult> {
   }
 }
 
+const uiLocalesDir = (): string => join(app.getPath('userData'), 'locales')
+/** 直近の「言語ファイルを選ぶ」で選ばれたパス。削除してよいのは、この中のファイルだけ */
+const pickedLocalePaths = new Set<string>()
+
+/** userData/locales の言語ファイルを読む (キー: 言語コード、値: 辞書) */
+function readUiLocales(): Record<string, Record<string, string>> {
+  const out: Record<string, Record<string, string>> = {}
+  try {
+    for (const f of readdirSync(uiLocalesDir())) {
+      if (!f.toLowerCase().endsWith('.json')) continue
+      const code = f.slice(0, -5).toLowerCase()
+      if (!isLocaleCode(code)) continue
+      try {
+        const raw = JSON.parse(readFileSync(join(uiLocalesDir(), f), 'utf-8').replace(/^\uFEFF/, '')) as unknown
+        if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) continue
+        const d: Record<string, string> = {}
+        for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+          if (typeof v === 'string' && v.trim() !== '') d[k] = v
+        }
+        out[code] = d
+      } catch {
+        // 壊れたファイルは無視する
+      }
+    }
+  } catch {
+    // フォルダがまだ無い
+  }
+  return out
+}
+
 function createWindow(): void {
   win = new BrowserWindow({
     width: 1200,
@@ -239,6 +272,71 @@ app.whenReady().then(() => {
       logCommand(`write file ${p}`)
     }
     return { path: dir, count: files.length }
+  })
+  ipcMain.handle(IPC.pickUiLocaleFiles, async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+      defaultPath: app.getPath('downloads')
+    })
+    pickedLocalePaths.clear()
+    if (r.canceled) return []
+    logCommand(`pick language files ${r.filePaths.join(', ')}`)
+    return r.filePaths.map((p) => {
+      pickedLocalePaths.add(p)
+      const tooBig = statSync(p).size > 1_000_000
+      return { path: p, name: basename(p), text: tooBig ? '' : readFileSync(p, 'utf-8'), tooBig }
+    })
+  })
+  ipcMain.handle(IPC.listUiLocales, () => readUiLocales())
+  ipcMain.handle(IPC.saveUiLocale, async (_e, req: SaveLocaleRequest): Promise<SaveLocaleResult> => {
+    if (!isLocaleCode(req.code) || req.code === 'en') {
+      return { ok: false, deleted: false, message: 'invalid language code' }
+    }
+    mkdirSync(uiLocalesDir(), { recursive: true })
+    const dest = join(uiLocalesDir(), `${req.code}.json`)
+    writeFileSync(dest, JSON.stringify(req.dict, null, 2) + '\n', 'utf-8')
+    logCommand(`write language file ${dest}`)
+    let deleted = false
+    let message = ''
+    const mode = settings.deleteImported
+    if (mode !== 'never' && pickedLocalePaths.has(req.sourcePath)) {
+      let yes = mode === 'always'
+      if (mode === 'ask') {
+        const opts = {
+          type: 'question' as const,
+          buttons: [req.confirm.yes, req.confirm.no],
+          defaultId: 1,
+          cancelId: 1,
+          message: req.confirm.message
+        }
+        const r = win ? await dialog.showMessageBox(win, opts) : await dialog.showMessageBox(opts)
+        yes = r.response === 0
+      }
+      if (yes) {
+        try {
+          unlinkSync(req.sourcePath)
+          pickedLocalePaths.delete(req.sourcePath)
+          deleted = true
+          logCommand(`delete ${req.sourcePath}`)
+        } catch (e) {
+          message = (e as Error).message
+        }
+      }
+    }
+    return { ok: true, deleted, message }
+  })
+  ipcMain.handle(IPC.deleteUiLocale, (_e, code: string) => {
+    if (!isLocaleCode(code)) return false
+    const p = join(uiLocalesDir(), `${code}.json`)
+    if (!existsSync(p)) return false
+    unlinkSync(p)
+    logCommand(`delete language file ${p}`)
+    if (settings.uiLanguage === code) {
+      settings = { ...settings, uiLanguage: 'auto' }
+      saveSettings(settings)
+    }
+    return true
   })
   ipcMain.handle(IPC.saveFile, (_e, name: string, content: string) => {
     const dir = resolveOutputDir()

@@ -9,6 +9,10 @@ const api: Api = {
   translate: (req) => ipcRenderer.invoke(IPC.translate, req),
   cancelTranslate: () => ipcRenderer.invoke(IPC.cancelTranslate),
   saveBulk: (files, zipName) => ipcRenderer.invoke(IPC.saveBulk, files, zipName),
+  pickUiLocaleFiles: () => ipcRenderer.invoke(IPC.pickUiLocaleFiles),
+  saveUiLocale: (req) => ipcRenderer.invoke(IPC.saveUiLocale, req),
+  listUiLocales: () => ipcRenderer.invoke(IPC.listUiLocales),
+  deleteUiLocale: (code) => ipcRenderer.invoke(IPC.deleteUiLocale, code),
   onTranslateProgress: (cb) => {
     ipcRenderer.on(IPC.translateProgress, (_e, p) => cb(p))
   },

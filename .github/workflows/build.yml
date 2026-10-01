@@ -53,6 +53,7 @@ jobs:
         run: |
           npm test
           npm run typecheck
+          npm run check:i18n
 
       - name: Build app
         run: npm run build

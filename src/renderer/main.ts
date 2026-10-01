@@ -4,6 +4,8 @@ import jaJson from './locales/ja.json'
 import type { Settings } from '@shared/types'
 import { initProviders } from './providers'
 import { initLangPicker } from './langpicker'
+import { initUiLang, langDisplayName } from './uilang'
+import { pickLocale } from '@shared/locale-file'
 let editorMod: typeof import('./editor') | null = null
 let providersUi: { render: () => void } | null = null
 
@@ -22,18 +24,48 @@ function applyI18n(): void {
   })
 }
 
+/** 追加した表示言語 (コード → 辞書)。userData/locales から読む */
+let custom: Record<string, Record<string, string>> = {}
+const allLocales = (): Record<string, Record<string, string>> => ({ ...builtin, ...custom })
+
+/** 表示言語の選択肢 (自動 / 標準の言語 / 追加した言語) を作り直す */
+function fillUiLang(selected: string): void {
+  const sel = $<HTMLSelectElement>('set-lang')
+  sel.innerHTML = ''
+  const add = (value: string, text: string): void => {
+    const o = document.createElement('option')
+    o.value = value
+    o.textContent = text
+    sel.appendChild(o)
+  }
+  add('auto', t('settings.lang.auto'))
+  add('en', 'English')
+  add('ja', '日本語')
+  for (const code of Object.keys(custom).sort()) {
+    if (code !== 'en' && code !== 'ja') add(code, langDisplayName(code))
+  }
+  sel.value = Array.from(sel.options).some((o) => o.value === selected) ? selected : 'auto'
+}
+
+/** 直前に適用した表示言語 (切り替わったことを検出するため) */
+let shownLang = ''
+
 async function applySettings(s: Settings): Promise<void> {
   document.documentElement.dataset.theme = s.theme
   editorMod?.setEditorTheme(s.theme === 'dark')
-  const code =
-    s.uiLanguage === 'auto'
-      ? (await window.api.getLocale()).toLowerCase().split('-')[0]
-      : s.uiLanguage
-  dict = builtin[code] ?? en
-  document.documentElement.lang = builtin[code] ? code : 'en'
+  const all = allLocales()
+  const requested = s.uiLanguage === 'auto' ? await window.api.getLocale() : s.uiLanguage
+  const chosen = pickLocale(requested, Object.keys(all))
+  dict = all[chosen] ?? en
+  document.documentElement.lang = chosen
+  fillUiLang(s.uiLanguage)
+  const langChanged = shownLang !== '' && shownLang !== chosen
+  shownLang = chosen
   applyI18n()
   providersUi?.render()
   document.dispatchEvent(new Event('i18n-changed'))
+  // 前の言語の状態表示 (保存しました / 完了 など) を、各画面で消す
+  if (langChanged) document.dispatchEvent(new Event('ui-lang-changed'))
   logEl.classList.toggle('hidden', !s.showCommandLog)
 }
 
@@ -55,6 +87,7 @@ document.querySelectorAll<HTMLButtonElement>('#tabs button').forEach((btn) => {
 
 async function init(): Promise<void> {
   let settings = await window.api.getSettings()
+  custom = await window.api.listUiLocales()
   const theme = $<HTMLSelectElement>('set-theme')
   const lang = $<HTMLSelectElement>('set-lang')
   const showLog = $<HTMLInputElement>('set-log')
@@ -77,6 +110,9 @@ async function init(): Promise<void> {
   bulk.value = settings.bulkMethod
   nameStyle.addEventListener('change', () => update({ fileNameStyle: nameStyle.value as Settings['fileNameStyle'] }))
   bulk.addEventListener('change', () => update({ bulkMethod: bulk.value as Settings['bulkMethod'] }))
+  const delImp = $<HTMLSelectElement>('uil-delete')
+  delImp.value = settings.deleteImported
+  delImp.addEventListener('change', () => update({ deleteImported: delImp.value as Settings['deleteImported'] }))
 
   const outDir = $('out-dir')
   const refreshOutDir = async (): Promise<void> => {
@@ -96,6 +132,17 @@ async function init(): Promise<void> {
   await refreshOutDir()
   providersUi = initProviders(t)
   const picker = initLangPicker(t)
+  const uiLang = initUiLang({
+    t,
+    en,
+    custom: () => custom,
+    reload: async () => {
+      custom = await window.api.listUiLocales()
+      settings = await window.api.getSettings()
+      await applySettings(settings)
+    }
+  })
+  uiLang.render()
   void import('./editor').then((m) => {
     editorMod = m
     m.initEditor(t, picker)

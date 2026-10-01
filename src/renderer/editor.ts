@@ -4,11 +4,13 @@ import 'monaco-editor/language/json/monaco.contribution.js'
 import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
 import type { LangPicker } from './langpicker'
+import { fileNameFor, getLanguage } from '@shared/languages'
 import { initResults } from './results'
 import { isIgnoredId, scanKeys, type KeyEntry, type Marks } from '@shared/keyscan'
 import { findUntranslated, type Untranslated } from '@shared/untranslated'
 import { renderUntranslated } from './unview'
 import { retranslate } from './retry'
+import { errText } from './errtext'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
   getWorker: (_id, label) => (label === 'json' ? new jsonWorker() : new editorWorker())
@@ -90,13 +92,20 @@ $('btn-pick').addEventListener('click', async () => {
     status.textContent = ''
   })
 
+  // 単体のダウンロード名は、翻訳先の言語に合わせる (ja_jp.json / ja.json。設定で形式を選べる)
+  const outName = async (): Promise<string> => {
+    const code = lastCtx?.to ?? picker.selected()[0]
+    const l = code ? getLanguage(code) : undefined
+    if (!l) return currentName || 'output.json'
+    return fileNameFor(l, (await window.api.getSettings()).fileNameStyle)
+  }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()
     if (!text.trim()) {
       status.textContent = t('editor.nothing')
       return
     }
-    const saved = await window.api.saveFile(currentName || 'output.json', text)
+    const saved = await window.api.saveFile(await outName(), text)
     status.textContent = t('editor.saved') + saved
   })
 
@@ -163,9 +172,9 @@ $('btn-pick').addEventListener('click', async () => {
       }
       refreshUn()
       trStatus.textContent =
-        t('tr.done') + (r.message ? ` [${r.message}]` : '')
+        t('tr.done') + (r.message ? ` [${errText(r.message, t)}]` : '')
     } else {
-      trStatus.textContent = r.cancelled ? t('tr.cancelled') : `${t('tr.failed')}: ${r.message}`
+      trStatus.textContent = r.cancelled ? t('tr.cancelled') : `${t('tr.failed')}: ${errText(r.message, t)}`
     }
   })
 
@@ -307,7 +316,7 @@ $('btn-pick').addEventListener('click', async () => {
     const out = await retranslate(items, to, computeUn)
     btnTr.disabled = false
     if (!out.ok) {
-      trStatus.textContent = `${t('tr.failed')}: ${out.message}`
+      trStatus.textContent = `${t('tr.failed')}: ${errText(out.message, t)}`
       return
     }
     if (out.edits.length === 0) {
@@ -355,6 +364,10 @@ $('btn-pick').addEventListener('click', async () => {
     unTimer = window.setTimeout(refreshUn, 250)
   })
   document.addEventListener('i18n-changed', refreshUn)
+  document.addEventListener('ui-lang-changed', () => {
+    trStatus.textContent = ''
+    status.textContent = currentName
+  })
 
   // --- 複数言語 (phase5) ---
   const res = initResults(t, {

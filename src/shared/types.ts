@@ -73,6 +73,30 @@ export interface BulkResult {
   count: number
 }
 
+export type DeleteImported = 'ask' | 'always' | 'never'
+
+export interface PickedLocaleFile {
+  path: string
+  name: string
+  text: string
+  tooBig: boolean
+}
+
+export interface SaveLocaleRequest {
+  code: string
+  dict: Record<string, string>
+  /** 追加元のファイル (削除の対象。選んだファイルのパスだけ受け付ける) */
+  sourcePath: string
+  /** 削除の確認ダイアログの文言 (表示言語に合わせて画面側から渡す) */
+  confirm: { message: string; yes: string; no: string }
+}
+
+export interface SaveLocaleResult {
+  ok: boolean
+  deleted: boolean
+  message: string
+}
+
 export interface Settings {
   theme: Theme
   /** 'auto' = PCの言語に合わせる */
@@ -87,6 +111,8 @@ export interface Settings {
   /** ja_jp.json (full) / ja.json (short) */
   fileNameStyle: NameStyle
   bulkMethod: BulkMethod
+  /** 表示言語ファイルの追加後、元のファイルを削除するか */
+  deleteImported: DeleteImported
   /** 複数言語モードで選択中の言語コード */
   targetLangs: string[]
 }
@@ -94,7 +120,7 @@ export interface Settings {
 export const DEFAULT_SETTINGS: Settings = {
   theme: 'dark',
   uiLanguage: 'auto',
-  showCommandLog: true,
+  showCommandLog: false,
   outputDir: '',
   providers: [],
   distribution: { enabled: false },
@@ -102,6 +128,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ignoreKeys: '',
   fileNameStyle: 'full',
   bulkMethod: 'zip',
+  deleteImported: 'ask',
   targetLangs: ['ja']
 }
 
@@ -124,7 +151,11 @@ export const IPC = {
   translate: 'translate:run',
   cancelTranslate: 'translate:cancel',
   translateProgress: 'translate:progress',
-  saveBulk: 'file:save-bulk'
+  saveBulk: 'file:save-bulk',
+  pickUiLocaleFiles: 'uilocale:pick',
+  saveUiLocale: 'uilocale:save',
+  listUiLocales: 'uilocale:list',
+  deleteUiLocale: 'uilocale:delete'
 } as const
 
 export interface Api {
@@ -139,6 +170,10 @@ export interface Api {
   cancelTranslate(): Promise<void>
   onTranslateProgress(cb: (p: TranslateProgress) => void): void
   saveBulk(files: BulkFile[], zipName: string): Promise<BulkResult>
+  pickUiLocaleFiles(): Promise<PickedLocaleFile[]>
+  saveUiLocale(req: SaveLocaleRequest): Promise<SaveLocaleResult>
+  listUiLocales(): Promise<Record<string, Record<string, string>>>
+  deleteUiLocale(code: string): Promise<boolean>
   chooseDir(): Promise<string | null>
   saveFile(name: string, content: string): Promise<string>
 }

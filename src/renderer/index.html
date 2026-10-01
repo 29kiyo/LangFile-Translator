@@ -123,6 +123,7 @@
           </div>
         </section>
         <section id="view-settings" class="view">
+          <h2 data-i18n="settings.section.display"></h2>
           <div class="row">
             <label for="set-theme" data-i18n="settings.theme"></label>
             <select id="set-theme">
@@ -132,15 +133,31 @@
           </div>
           <div class="row">
             <label for="set-lang" data-i18n="settings.language"></label>
-            <select id="set-lang">
-              <option value="auto" data-i18n="settings.lang.auto"></option>
-              <option value="en">English</option>
-              <option value="ja">日本語</option>
-            </select>
+            <select id="set-lang"></select>
           </div>
           <div class="row">
-            <input type="checkbox" class="switch" id="set-log" />
-            <label for="set-log" data-i18n="settings.showLog"></label>
+            <label data-i18n="settings.addLang"></label>
+            <button id="uil-add" data-i18n="settings.addLang.add"></button>
+            <button id="uil-template" data-i18n="settings.addLang.template"></button>
+          </div>
+          <p class="hint" data-i18n="settings.addLang.hint"></p>
+          <div class="row">
+            <label for="uil-delete" data-i18n="settings.afterImport"></label>
+            <select id="uil-delete">
+              <option value="ask" data-i18n="settings.afterImport.ask"></option>
+              <option value="always" data-i18n="settings.afterImport.always"></option>
+              <option value="never" data-i18n="settings.afterImport.never"></option>
+            </select>
+          </div>
+          <ul id="uil-list" hidden></ul>
+          <pre id="uil-result"></pre>
+
+          <h2 data-i18n="settings.section.output"></h2>
+          <div class="row">
+            <label data-i18n="settings.outputDir"></label>
+            <code id="out-dir"></code>
+            <button id="btn-outdir" data-i18n="settings.chooseDir"></button>
+            <button id="btn-outdir-reset" data-i18n="settings.resetDir"></button>
           </div>
           <div class="row">
             <label for="set-namestyle" data-i18n="settings.nameStyle"></label>
@@ -156,15 +173,15 @@
               <option value="folder" data-i18n="settings.bulk.folder"></option>
             </select>
           </div>
+
+          <h2 data-i18n="settings.section.other"></h2>
           <div class="row">
-            <label data-i18n="settings.outputDir"></label>
-            <code id="out-dir"></code>
-            <button id="btn-outdir" data-i18n="settings.chooseDir"></button>
-            <button id="btn-outdir-reset" data-i18n="settings.resetDir"></button>
+            <input type="checkbox" class="switch" id="set-log" />
+            <label for="set-log" data-i18n="settings.showLog"></label>
           </div>
         </section>
       </main>
-      <pre id="log"></pre>
+      <pre id="log" class="hidden"></pre>
     </div>
     <script type="module" src="./main.ts"></script>
   </body>

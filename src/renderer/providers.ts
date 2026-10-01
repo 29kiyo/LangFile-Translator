@@ -22,6 +22,9 @@ export function initProviders(t: (key: string) => string): { render: () => void 
   const fPriority = $<HTMLInputElement>('pf-priority')
   const fEnabled = $<HTMLInputElement>('pf-enabled')
   const result = $('pf-result')
+  document.addEventListener('ui-lang-changed', () => {
+    result.textContent = ''
+  })
   const testBtn = $<HTMLButtonElement>('pf-test')
 
   for (const [type, p] of Object.entries(PROVIDER_PRESETS)) {

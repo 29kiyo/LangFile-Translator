@@ -7,6 +7,7 @@ import { findUntranslated, parseIgnoreKeys, type Untranslated } from '@shared/un
 import { renderUntranslated, uniqueLines } from './unview'
 import { applyReplacements } from '@shared/textedit'
 import { retranslate } from './retry'
+import { errText } from './errtext'
 
 type Status = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
 
@@ -74,6 +75,9 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   const accBar = el('div', 'acc-bar')
   const saveBtn = el('button', undefined, t('res.save'))
   const accHint = el('span', 'hint')
+  document.addEventListener('ui-lang-changed', () => {
+    accHint.textContent = ''
+  })
   const unBox = el('span', 'un-list')
   unBox.hidden = true
   const edHost = el('div', 'acc-editor')
@@ -141,7 +145,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const out = await retranslate(items, r.code, () => calcUn(cur(), r))
     btnTr.disabled = false
     if (!out.ok) {
-      status.textContent = `${t('tr.failed')}: ${out.message}`
+      status.textContent = `${t('tr.failed')}: ${errText(out.message, t)}`
       return
     }
     if (out.edits.length === 0) {
@@ -262,7 +266,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       case 'done':
         return t('tr.done')
       case 'failed':
-        return `${t('tr.failed')}: ${r.message.slice(0, 60)}`
+        return `${t('tr.failed')}: ${errText(r.message, t).slice(0, 60)}`
       case 'cancelled':
         return t('tr.cancelled')
     }
@@ -304,7 +308,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       const head = el('div', 'res-head')
       const name = el('span', 'rname', rowName(r))
       const st = el('span', `rstate ${r.status}`, stateText(r))
-      if (r.status === 'failed') st.title = r.message
+      if (r.status === 'failed') st.title = errText(r.message, t)
       const dl = el('button', undefined, t('res.download'))
       dl.disabled = r.status !== 'done'
       dl.addEventListener('click', () => void downloadOne(r))
