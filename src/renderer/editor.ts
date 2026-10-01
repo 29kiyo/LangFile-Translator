@@ -8,6 +8,7 @@ import { initResults } from './results'
 import { isIgnoredId, scanKeys, type KeyEntry, type Marks } from '@shared/keyscan'
 import { findUntranslated, type Untranslated } from '@shared/untranslated'
 import { renderUntranslated } from './unview'
+import { retranslate } from './retry'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
   getWorker: (_id, label) => (label === 'json' ? new jsonWorker() : new editorWorker())
@@ -32,7 +33,7 @@ export function initEditor(t: (key: string) => string, picker: LangPicker): void
     fontSize: 13
   }
   const left = monaco.editor.create($('editor-left'), { ...options, glyphMargin: true })
-  const right = monaco.editor.create($('editor-right'), options)
+  const right = monaco.editor.create($('editor-right'), { ...options, glyphMargin: true })
 
   let currentName = ''
 
@@ -155,6 +156,7 @@ $('btn-pick').addEventListener('click', async () => {
       dismissed.clear()
       lastCtx = {
         source: src,
+        to: codes[0],
         mode: modeValue(),
         ignore: keyList(),
         marks: { marked: new Set(marks.marked), released: new Set(marks.released) }
@@ -276,7 +278,7 @@ $('btn-pick').addEventListener('click', async () => {
 
   // --- 未翻訳行の表示 (phase5) ---
   // 直近の翻訳の条件 (原文・モード・無視) を覚えておき、右エディタの内容と比べて「原文のまま残った行」を出す
-  let lastCtx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks: Marks } | null = null
+  let lastCtx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks: Marks; to: string } | null = null
   const unBox = $('un-single')
   const jumpRight = (u: Untranslated): void => {
     right.revealLineInCenter(u.line)
@@ -289,14 +291,64 @@ $('btn-pick').addEventListener('click', async () => {
     for (const x of items) dismissed.add(x.idx)
     refreshUn()
   }
-  const refreshUn = (): void => {
-    const multi = picker.selected().length >= 2
-    const list =
-      lastCtx && !multi
-        ? findUntranslated(lastCtx.source, right.getValue(), lastCtx.mode, lastCtx.ignore, lastCtx.marks, dismissed)
-        : []
-    renderUntranslated(unBox, list, t, jumpRight, dismissItems)
+  const rightDeco = right.createDecorationsCollection()
+  let curList: Untranslated[] = []
+  const computeUn = (): Untranslated[] =>
+    lastCtx && picker.selected().length < 2
+      ? findUntranslated(lastCtx.source, right.getValue(), lastCtx.mode, lastCtx.ignore, lastCtx.marks, dismissed)
+      : []
+
+  // 未翻訳の文字列だけを再翻訳して、右エディタに1回の編集として反映する (Ctrl+Z で戻せる)
+  const retryItems = async (items: Untranslated[]): Promise<void> => {
+    if (btnTr.disabled || !lastCtx || items.length === 0) return
+    const to = lastCtx.to
+    btnTr.disabled = true
+    trStatus.textContent = t('un.retrying')
+    const out = await retranslate(items, to, computeUn)
+    btnTr.disabled = false
+    if (!out.ok) {
+      trStatus.textContent = `${t('tr.failed')}: ${out.message}`
+      return
+    }
+    if (out.edits.length === 0) {
+      trStatus.textContent = t('un.retryNone')
+      return
+    }
+    right.pushUndoStop()
+    right.executeEdits(
+      'retranslate',
+      out.edits.map((e) => ({ range: new monaco.Range(e.line, e.startCol, e.line, e.endCol), text: e.text }))
+    )
+    right.pushUndoStop()
+    refreshUn()
+    trStatus.textContent = t('un.retryDone').replace('{n}', String(out.edits.length))
   }
+
+  const refreshUn = (): void => {
+    curList = computeUn()
+    renderUntranslated(unBox, curList, t, jumpRight, dismissItems, retryItems)
+    // 未翻訳の行の左に赤い点 (クリックでその行だけ再翻訳)
+    const seen = new Set<number>()
+    const decos: monaco.editor.IModelDeltaDecoration[] = []
+    for (const u of curList) {
+      if (seen.has(u.line)) continue
+      seen.add(u.line)
+      decos.push({
+        range: new monaco.Range(u.line, 1, u.line, 1),
+        options: {
+          glyphMarginClassName: 'un-dot',
+          glyphMarginHoverMessage: { value: `${t('un.dotTip')}: \`${u.source.slice(0, 60).replace(/`/g, "'")}\`` }
+        }
+      })
+    }
+    rightDeco.set(decos)
+  }
+  right.onMouseDown((e) => {
+    if (e.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && e.target.position) {
+      const line = e.target.position.lineNumber
+      void retryItems(curList.filter((x) => x.line === line))
+    }
+  })
   let unTimer = 0
   right.onDidChangeModelContent(() => {
     window.clearTimeout(unTimer)

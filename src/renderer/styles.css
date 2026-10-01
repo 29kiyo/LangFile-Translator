@@ -673,3 +673,21 @@ input[type='checkbox'].switch:checked::after {
   margin: 2px 0;
   background: var(--border);
 }
+
+/* 未翻訳行の赤い点 (出力エディタ。クリックでその行を再翻訳) */
+.un-dot::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: #e5484d;
+  cursor: pointer;
+}
+.un-retry {
+  padding: 0 8px;
+  font-size: 12px;
+}

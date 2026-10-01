@@ -24,7 +24,8 @@ export function renderUntranslated(
   list: Untranslated[],
   t: (key: string) => string,
   jump: (u: Untranslated) => void,
-  dismiss: (items: Untranslated[]) => void
+  dismiss: (items: Untranslated[]) => void,
+  retry?: (items: Untranslated[]) => void
 ): void {
   box.textContent = ''
   const items = perLine(list)
@@ -38,6 +39,14 @@ export function renderUntranslated(
   label.className = 'un-label'
   label.textContent = t('un.label').replace('{n}', String(items.length))
   box.appendChild(label)
+  if (retry) {
+    const rb = document.createElement('button')
+    rb.type = 'button'
+    rb.className = 'un-retry'
+    rb.textContent = t('un.retry')
+    rb.addEventListener('click', () => retry(list))
+    box.appendChild(rb)
+  }
   const all = expanded.get(box) === true
   for (const u of all ? items : items.slice(0, MAX)) {
     const b = document.createElement('button')
@@ -60,7 +69,7 @@ export function renderUntranslated(
     more.textContent = t('un.more').replace('{n}', String(items.length - MAX))
     more.addEventListener('click', () => {
       expanded.set(box, true)
-      renderUntranslated(box, list, t, jump, dismiss)
+      renderUntranslated(box, list, t, jump, dismiss, retry)
     })
     box.appendChild(more)
   }

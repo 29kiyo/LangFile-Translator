@@ -5,6 +5,8 @@ import { nativeName } from './langpicker'
 import type { Marks } from '@shared/keyscan'
 import { findUntranslated, parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
 import { renderUntranslated, uniqueLines } from './unview'
+import { applyReplacements } from '@shared/textedit'
+import { retranslate } from './retry'
 
 type Status = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
 
@@ -20,7 +22,7 @@ interface Result {
   unt: Untranslated[]
   /** 右クリックで対象外にした項目 (原文の文字列の通し番号) */
   dismissed: Set<number>
-  ui?: { badge: HTMLElement }
+  ui?: { badge: HTMLElement; retry: HTMLButtonElement }
   message: string
 }
 
@@ -78,6 +80,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   accBar.append(saveBtn, accHint, unBox)
   acc.append(accBar, edHost)
   let ed: monaco.editor.IStandaloneCodeEditor | null = null
+  let edDeco: monaco.editor.IEditorDecorationsCollection | null = null
 
   const rowName = (r: Result): string => `${r.file}${r.draft !== undefined ? ' ●' : ''}`
 
@@ -99,9 +102,70 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       r.unt = calcUn(cur, r)
       refreshUnUi(r)
     }
+  // 開いている行のエディタに、未翻訳の行の赤い点を出す
+  const drawDots = (r: Result): void => {
+    if (!edDeco) return
+    const seen = new Set<number>()
+    const decos: monaco.editor.IModelDeltaDecoration[] = []
+    for (const u of r.unt) {
+      if (seen.has(u.line)) continue
+      seen.add(u.line)
+      decos.push({
+        range: new monaco.Range(u.line, 1, u.line, 1),
+        options: {
+          glyphMarginClassName: 'un-dot',
+          glyphMarginHoverMessage: { value: `${t('un.dotTip')}: \`${u.source.slice(0, 60).replace(/`/g, "'")}\`` }
+        }
+      })
+    }
+    edDeco.set(decos)
+  }
   const refreshUnUi = (r: Result): void => {
-    if (r.ui) r.ui.badge.textContent = unBadge(r)
-    if (results[openIdx] === r) renderUntranslated(unBox, r.unt, t, jump, dismissFor(r))
+    if (r.ui) {
+      r.ui.badge.textContent = unBadge(r)
+      r.ui.retry.hidden = r.status !== 'done' || r.unt.length === 0
+    }
+    if (results[openIdx] === r) {
+      renderUntranslated(unBox, r.unt, t, jump, dismissFor(r), (items) => void retry(r, items))
+      drawDots(r)
+    }
+  }
+
+  // 未翻訳の文字列だけを再翻訳して、その言語の結果として即確定する (ダウンロードにも反映される)
+  const retry = async (r: Result, items: Untranslated[]): Promise<void> => {
+    if (btnTr.disabled || items.length === 0 || r.status !== 'done') return
+    btnTr.disabled = true
+    status.textContent = t('un.retrying')
+    const openNow = (): boolean => results[openIdx] === r && ed !== null
+    const cur = (): string => (openNow() && ed ? ed.getValue() : (r.draft ?? r.text))
+    const out = await retranslate(items, r.code, () => calcUn(cur(), r))
+    btnTr.disabled = false
+    if (!out.ok) {
+      status.textContent = `${t('tr.failed')}: ${out.message}`
+      return
+    }
+    if (out.edits.length === 0) {
+      status.textContent = t('un.retryNone')
+      return
+    }
+    if (openNow() && ed) {
+      ed.pushUndoStop()
+      ed.executeEdits(
+        'retranslate',
+        out.edits.map((e) => ({ range: new monaco.Range(e.line, e.startCol, e.line, e.endCol), text: e.text }))
+      )
+      ed.pushUndoStop()
+      r.text = ed.getValue()
+      saveBtn.disabled = true
+      accHint.textContent = t('res.applied')
+    } else {
+      r.text = applyReplacements(cur(), out.edits)
+    }
+    r.draft = undefined
+    r.unt = calcUn(r.text, r)
+    if (openName && results[openIdx] === r) openName.textContent = rowName(r)
+    refreshUnUi(r)
+    status.textContent = t('un.retryDone').replace('{n}', String(out.edits.length))
   }
   let unTimer = 0
   let unRow: Result | null = null
@@ -128,6 +192,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       automaticLayout: true,
       minimap: { enabled: false },
       lineNumbers: 'on',
+      glyphMargin: true,
       scrollBeyondLastLine: false,
       dropIntoEditor: { enabled: false },
       fontSize: 13
@@ -142,6 +207,14 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       accHint.textContent = ''
       if (openName) openName.textContent = rowName(r)
       scheduleUn(r)
+    })
+    edDeco = e.createDecorationsCollection()
+    e.onMouseDown((ev) => {
+      const r = results[openIdx]
+      if (r && ev.target.type === monaco.editor.MouseTargetType.GUTTER_GLYPH_MARGIN && ev.target.position) {
+        const line = ev.target.position.lineNumber
+        void retry(r, r.unt.filter((x) => x.line === line))
+      }
     })
     ed = e
     return e
@@ -236,8 +309,11 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       dl.disabled = r.status !== 'done'
       dl.addEventListener('click', () => void downloadOne(r))
       const badge = el('span', 'rbadge', unBadge(r))
-      r.ui = { badge }
-      head.append(el('span', 'arrow', i === openIdx ? '▾' : '▸'), name, el('span', 'rmeta', nativeName(r.code)), st, badge, dl)
+      const retryBtn = el('button', undefined, t('un.retry'))
+      retryBtn.hidden = r.status !== 'done' || r.unt.length === 0
+      retryBtn.addEventListener('click', () => void retry(r, r.unt))
+      r.ui = { badge, retry: retryBtn }
+      head.append(el('span', 'arrow', i === openIdx ? '▾' : '▸'), name, el('span', 'rmeta', nativeName(r.code)), st, badge, retryBtn, dl)
       head.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('button')) return
         toggle(i)
@@ -247,8 +323,9 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       if (i === openIdx) {
         openName = name
         li.appendChild(acc)
-        renderUntranslated(unBox, r.unt, t, jump, dismissFor(r))
+        renderUntranslated(unBox, r.unt, t, jump, dismissFor(r), (items) => void retry(r, items))
         getEd().layout()
+        drawDots(r)
       }
     })
   }
