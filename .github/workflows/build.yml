@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build (e.g. v1.0.0). Empty = 0.0.0-dev.<run number>'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  contents: read
 
 jobs:
   windows:
@@ -24,6 +33,21 @@ jobs:
           npm ci
           # electron のバイナリが入らないことがあるため、念のため実行する
           node node_modules/electron/install.js
+
+      - name: Set version
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+        run: |
+          V="${INPUT_VERSION#v}"
+          V="${V#V}"
+          if [ -z "$V" ]; then V="0.0.0-dev.${GITHUB_RUN_NUMBER}"; fi
+          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "Invalid version: '${INPUT_VERSION}' (example: v1.0.0)"
+            exit 1
+          fi
+          # package.json の version を、入力された値に書き換える (ビルド用の作業コピーのみ。コミットはされない)
+          npm version "$V" --no-git-tag-version --allow-same-version
+          echo "Building version $V"
 
       - name: Test and typecheck
         run: |
