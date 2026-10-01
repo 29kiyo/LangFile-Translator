@@ -3,9 +3,11 @@ import 'monaco-editor/editor/editor.main.js'
 import 'monaco-editor/language/json/monaco.contribution.js'
 import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
-import { initLangPicker } from './langpicker'
+import type { LangPicker } from './langpicker'
 import { initResults } from './results'
-import { isIgnoredId, scanKeys, type KeyEntry } from '@shared/keyscan'
+import { isIgnoredId, scanKeys, type KeyEntry, type Marks } from '@shared/keyscan'
+import { findUntranslated, type Untranslated } from '@shared/untranslated'
+import { renderUntranslated } from './unview'
 
 ;(self as unknown as { MonacoEnvironment: monaco.Environment }).MonacoEnvironment = {
   getWorker: (_id, label) => (label === 'json' ? new jsonWorker() : new editorWorker())
@@ -18,7 +20,7 @@ export function setEditorTheme(dark: boolean): void {
   monaco.editor.setTheme(dark ? 'vs-dark' : 'vs')
 }
 
-export function initEditor(t: (key: string) => string): void {
+export function initEditor(t: (key: string) => string, picker: LangPicker): void {
   const options: monaco.editor.IStandaloneEditorConstructionOptions = {
     value: '',
     language: 'json',
@@ -150,8 +152,16 @@ $('btn-pick').addEventListener('click', async () => {
     btnCancel.hidden = true
     if (r.ok) {
       right.setValue(r.text)
+      dismissed.clear()
+      lastCtx = {
+        source: src,
+        mode: modeValue(),
+        ignore: keyList(),
+        marks: { marked: new Set(marks.marked), released: new Set(marks.released) }
+      }
+      refreshUn()
       trStatus.textContent =
-        t('tr.done') + (r.warnings ? ` (${t('tr.warnings')}: ${r.warnings})` : '') + (r.message ? ` [${r.message}]` : '')
+        t('tr.done') + (r.message ? ` [${r.message}]` : '')
     } else {
       trStatus.textContent = r.cancelled ? t('tr.cancelled') : `${t('tr.failed')}: ${r.message}`
     }
@@ -173,6 +183,8 @@ $('btn-pick').addEventListener('click', async () => {
   const clearMarks = (): void => {
     marks.marked.clear()
     marks.released.clear()
+    lastCtx = null
+    dismissed.clear()
   }
   const marksPayload = (): { marked: string[]; released: string[] } | undefined =>
     marks.marked.size || marks.released.size
@@ -262,14 +274,48 @@ $('btn-pick').addEventListener('click', async () => {
   })
   document.addEventListener('i18n-changed', refreshFixed)
 
+  // --- 未翻訳行の表示 (phase5) ---
+  // 直近の翻訳の条件 (原文・モード・無視) を覚えておき、右エディタの内容と比べて「原文のまま残った行」を出す
+  let lastCtx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks: Marks } | null = null
+  const unBox = $('un-single')
+  const jumpRight = (u: Untranslated): void => {
+    right.revealLineInCenter(u.line)
+    right.setSelection(new monaco.Range(u.line, u.startCol, u.line, u.endCol))
+    right.focus()
+  }
+  // 右クリックで対象外にした項目 (原文の文字列の通し番号)。クリア・ファイル読込・翻訳のやり直しでリセット
+  const dismissed = new Set<number>()
+  const dismissItems = (items: Untranslated[]): void => {
+    for (const x of items) dismissed.add(x.idx)
+    refreshUn()
+  }
+  const refreshUn = (): void => {
+    const multi = picker.selected().length >= 2
+    const list =
+      lastCtx && !multi
+        ? findUntranslated(lastCtx.source, right.getValue(), lastCtx.mode, lastCtx.ignore, lastCtx.marks, dismissed)
+        : []
+    renderUntranslated(unBox, list, t, jumpRight, dismissItems)
+  }
+  let unTimer = 0
+  right.onDidChangeModelContent(() => {
+    window.clearTimeout(unTimer)
+    unTimer = window.setTimeout(refreshUn, 250)
+  })
+  document.addEventListener('i18n-changed', refreshUn)
+
   // --- 複数言語 (phase5) ---
-  const picker = initLangPicker(t)
-  picker.onChange(applyMode)
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,
     getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value, marks: marksPayload() })
   })
+
+  // 結果一覧 (res) の初期化より後で、ピッカーの変更とモードを結び付ける
+  picker.onChange(applyMode)
+  picker.onChange(refreshUn)
+  applyMode()
+  refreshUn()
 
   const overlay = $('drop-overlay')
   const editorActive = (): boolean => $('view-editor').classList.contains('active')

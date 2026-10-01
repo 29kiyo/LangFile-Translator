@@ -2,6 +2,9 @@ import * as monaco from 'monaco-editor/editor/editor.api.js'
 import { fileNameFor, getLanguage } from '@shared/languages'
 import type { BulkFile } from '@shared/types'
 import { nativeName } from './langpicker'
+import type { Marks } from '@shared/keyscan'
+import { findUntranslated, parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
+import { renderUntranslated, uniqueLines } from './unview'
 
 type Status = 'pending' | 'running' | 'done' | 'failed' | 'cancelled'
 
@@ -13,6 +16,11 @@ interface Result {
   /** 保存前の編集内容 (保存または元に戻すと消える) */
   draft?: string
   warnings: number
+  /** 原文のまま残った行 (出力テキストの行番号) */
+  unt: Untranslated[]
+  /** 右クリックで対象外にした項目 (原文の文字列の通し番号) */
+  dismissed: Set<number>
+  ui?: { badge: HTMLElement }
   message: string
 }
 
@@ -51,6 +59,8 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   const btnCancel = $<HTMLButtonElement>('btn-cancel')
 
   let results: Result[] = []
+  /** 直近の翻訳の条件 (原文・モード・無視)。未翻訳の判定に使う */
+  let ctx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks?: Marks } | null = null
   let openIdx = -1
   let openName: HTMLElement | null = null
   let cancelFlag = false
@@ -62,12 +72,53 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   const accBar = el('div', 'acc-bar')
   const saveBtn = el('button', undefined, t('res.save'))
   const accHint = el('span', 'hint')
+  const unBox = el('span', 'un-list')
+  unBox.hidden = true
   const edHost = el('div', 'acc-editor')
-  accBar.append(saveBtn, accHint)
+  accBar.append(saveBtn, accHint, unBox)
   acc.append(accBar, edHost)
   let ed: monaco.editor.IStandaloneCodeEditor | null = null
 
   const rowName = (r: Result): string => `${r.file}${r.draft !== undefined ? ' ●' : ''}`
+
+  const calcUn = (text: string, r: Result): Untranslated[] =>
+    ctx ? findUntranslated(ctx.source, text, ctx.mode, ctx.ignore, ctx.marks, r.dismissed) : []
+  const unBadge = (r: Result): string =>
+    r.status === 'done' && r.unt.length ? t('un.badge').replace('{n}', String(uniqueLines(r.unt))) : ''
+  const jump = (u: Untranslated): void => {
+    const e = getEd()
+    e.revealLineInCenter(u.line)
+    e.setSelection(new monaco.Range(u.line, u.startCol, u.line, u.endCol))
+    e.focus()
+  }
+  const dismissFor =
+    (r: Result) =>
+    (items: Untranslated[]): void => {
+      for (const x of items) r.dismissed.add(x.idx)
+      const cur = ed && results[openIdx] === r ? ed.getValue() : (r.draft ?? r.text)
+      r.unt = calcUn(cur, r)
+      refreshUnUi(r)
+    }
+  const refreshUnUi = (r: Result): void => {
+    if (r.ui) r.ui.badge.textContent = unBadge(r)
+    if (results[openIdx] === r) renderUntranslated(unBox, r.unt, t, jump, dismissFor(r))
+  }
+  let unTimer = 0
+  let unRow: Result | null = null
+  const runUn = (): void => {
+    window.clearTimeout(unTimer)
+    const r = unRow
+    unRow = null
+    if (r && ed && results[openIdx] === r) {
+      r.unt = calcUn(ed.getValue(), r)
+      refreshUnUi(r)
+    }
+  }
+  const scheduleUn = (r: Result): void => {
+    unRow = r
+    window.clearTimeout(unTimer)
+    unTimer = window.setTimeout(runUn, 250)
+  }
 
   const getEd = (): monaco.editor.IStandaloneCodeEditor => {
     if (ed) return ed
@@ -90,6 +141,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       saveBtn.disabled = r.draft === undefined
       accHint.textContent = ''
       if (openName) openName.textContent = rowName(r)
+      scheduleUn(r)
     })
     ed = e
     return e
@@ -135,7 +187,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       case 'running':
         return t('tr.running')
       case 'done':
-        return t('tr.done') + (r.warnings ? ` (${t('tr.warnings')}: ${r.warnings})` : '')
+        return t('tr.done')
       case 'failed':
         return `${t('tr.failed')}: ${r.message.slice(0, 60)}`
       case 'cancelled':
@@ -144,6 +196,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   }
 
   const toggle = (i: number): void => {
+    runUn()
     const r = results[i]
     if (!r) return
     if (openIdx === i) {
@@ -182,7 +235,9 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       const dl = el('button', undefined, t('res.download'))
       dl.disabled = r.status !== 'done'
       dl.addEventListener('click', () => void downloadOne(r))
-      head.append(el('span', 'arrow', i === openIdx ? '▾' : '▸'), name, el('span', 'rmeta', nativeName(r.code)), st, dl)
+      const badge = el('span', 'rbadge', unBadge(r))
+      r.ui = { badge }
+      head.append(el('span', 'arrow', i === openIdx ? '▾' : '▸'), name, el('span', 'rmeta', nativeName(r.code)), st, badge, dl)
       head.addEventListener('click', (e) => {
         if ((e.target as HTMLElement).closest('button')) return
         toggle(i)
@@ -192,6 +247,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       if (i === openIdx) {
         openName = name
         li.appendChild(acc)
+        renderUntranslated(unBox, r.unt, t, jump, dismissFor(r))
         getEd().layout()
       }
     })
@@ -202,10 +258,16 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const src = deps.getSource()
     const s = await window.api.getSettings()
     const opt = deps.getOptions()
+    ctx = {
+      source: src,
+      mode: opt.mode,
+      ignore: parseIgnoreKeys(opt.ignoreKeys),
+      marks: opt.marks && { marked: new Set(opt.marks.marked), released: new Set(opt.marks.released) }
+    }
     const next: Result[] = []
     for (const code of codes) {
       const l = getLanguage(code)
-      if (l) next.push({ code, file: fileNameFor(l, s.fileNameStyle), status: 'pending', text: '', warnings: 0, message: '' })
+      if (l) next.push({ code, file: fileNameFor(l, s.fileNameStyle), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
     }
     results = next
     openIdx = -1
@@ -236,6 +298,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
         r.status = 'done'
         r.text = out.text
         r.warnings = out.warnings
+        r.unt = calcUn(r.text, r)
       } else if (out.cancelled) {
         r.status = 'cancelled'
         cancelFlag = true
@@ -252,11 +315,9 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     renderList()
     const ok = results.filter((r) => r.status === 'done').length
     const failed = results.filter((r) => r.status === 'failed').length
-    const warn = results.reduce((n, r) => n + r.warnings, 0)
     status.textContent =
       `${t('tr.done')}: ${ok}/${results.length}` +
       (failed ? ` / ${t('tr.failed')}: ${failed}` : '') +
-      (warn ? ` / ${t('tr.warnings')}: ${warn}` : '') +
       (cancelFlag ? ` / ${t('tr.cancelled')}` : '')
   }
 

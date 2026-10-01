@@ -3,6 +3,7 @@ import enJson from './locales/en.json'
 import jaJson from './locales/ja.json'
 import type { Settings } from '@shared/types'
 import { initProviders } from './providers'
+import { initLangPicker } from './langpicker'
 let editorMod: typeof import('./editor') | null = null
 let providersUi: { render: () => void } | null = null
 
@@ -94,9 +95,10 @@ async function init(): Promise<void> {
   })
   await refreshOutDir()
   providersUi = initProviders(t)
+  const picker = initLangPicker(t)
   void import('./editor').then((m) => {
     editorMod = m
-    m.initEditor(t)
+    m.initEditor(t, picker)
     m.setEditorTheme(settings.theme === 'dark')
   })
 

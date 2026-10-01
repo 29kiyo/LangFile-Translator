@@ -96,8 +96,19 @@ export function initLangPicker(t: (key: string) => string): LangPicker {
         )
     )
     shown = hit.map((l) => l.code)
+    // 選択中を上に並べる (解除すると元の位置へ戻る)
+    const on = hit.filter((l) => selected.has(l.code))
+    const ordered = [...on, ...hit.filter((l) => !selected.has(l.code))]
+    const keep = grid.scrollTop
     grid.innerHTML = ''
-    for (const l of hit) {
+    let sepDone = on.length === 0 || on.length === ordered.length
+    for (const l of ordered) {
+      if (!sepDone && !selected.has(l.code)) {
+        const sep = document.createElement('li')
+        sep.className = 'lsep'
+        grid.appendChild(sep)
+        sepDone = true
+      }
       const li = document.createElement('li')
       const label = document.createElement('label')
       const cb = document.createElement('input')
@@ -120,8 +131,10 @@ export function initLangPicker(t: (key: string) => string): LangPicker {
         if (cb.checked) selected.add(l.code)
         else selected.delete(l.code)
         changed()
+        render()
       })
     }
+    grid.scrollTop = keep
   }
 
   const setOpen = (open: boolean): void => {

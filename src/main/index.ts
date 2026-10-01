@@ -13,7 +13,10 @@ import {
 } from '@shared/types'
 import { translateJson } from './translate/engine'
 import { makeZip } from './zip'
+import iconIco from '../../build/icon.ico?asset'
+import iconPng from '../../build/icon.png?asset'
 
+const appIcon = process.platform === 'win32' ? iconIco : iconPng
 const settingsPath = join(app.getPath('userData'), 'settings.json')
 let win: BrowserWindow | null = null
 
@@ -166,6 +169,7 @@ function createWindow(): void {
     width: 1200,
     height: 800,
     show: false,
+    icon: appIcon,
     backgroundColor: settings.theme === 'dark' ? '#1e1e1e' : '#ffffff',
     webPreferences: { preload: join(__dirname, '../preload/index.js') }
   })
@@ -182,6 +186,8 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
+  // タスクバーのグループ化・ピン留め用 (配布版の appId と同じ値にする)
+  app.setAppUserModelId('com.github.29kiyo.json-translator')
   ipcMain.handle(IPC.getSettings, () => settings)
   ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => {
     settings = { ...settings, ...patch }

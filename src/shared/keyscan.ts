@@ -30,54 +30,78 @@ export interface KeyEntry {
   id: string
 }
 
-/** JSONテキストを走査し、全てのキーについて 行・キー名・パス を返す (途中まで壊れたJSONでも動く) */
-export function scanKeys(text: string): KeyEntry[] {
+export interface StrToken {
+  kind: 'key' | 'value'
+  /** JSON としてデコードした文字列 */
+  text: string
+  /** 開始位置の行 (1始まり) と、クォートを含む範囲の列 (Monaco と同じ: 1始まり、endCol は含まない) */
+  line: number
+  startCol: number
+  endCol: number
+  /** key のときだけ設定 (value は [] / '') */
+  path: KeyPath
+  id: string
+}
+
+/** JSONテキスト中の全ての文字列 (キーと値) を、出現順に 位置付きで返す (途中まで壊れたJSONでも動く) */
+export function scanStrings(text: string): StrToken[] {
   interface Frame {
     obj: boolean
     key: string
     index: number
   }
-  const out: KeyEntry[] = []
+  const out: StrToken[] = []
   const stack: Frame[] = []
   const n = text.length
   let line = 1
+  let lineStart = 0
   let i = 0
   while (i < n) {
     const c = text[i]
     if (c === '\n') {
       line++
       i++
+      lineStart = i
     } else if (c === '"') {
       const start = i
       const startLine = line
+      const startCol = i - lineStart + 1
       i++
       while (i < n && text[i] !== '"') {
         if (text[i] === '\\') i++
-        if (text[i] === '\n') line++
+        if (text[i] === '\n') {
+          line++
+          lineStart = i + 1
+        }
         i++
       }
       i++
+      const endCol = i - lineStart + 1
+      const raw = text.slice(start + 1, i - 1)
+      let s = raw
+      if (raw.includes('\\')) {
+        try {
+          s = JSON.parse(text.slice(start, i)) as string
+        } catch {
+          // 壊れた文字列はそのまま使う
+        }
+      }
       const top = stack[stack.length - 1]
+      let isKey = false
       if (top && top.obj) {
         let j = i
         while (j < n && (text[j] === ' ' || text[j] === '\t' || text[j] === '\r' || text[j] === '\n')) j++
-        if (text[j] === ':') {
-          let key = text.slice(start + 1, i - 1)
-          try {
-            key = JSON.parse(text.slice(start, i)) as string
-          } catch {
-            // 壊れた文字列はそのまま使う
-          }
-          top.key = key
-          const path = stack.map((f) => (f.obj ? f.key : f.index))
-          out.push({ line: startLine, key, path, id: pathId(path) })
-        }
+        isKey = text[j] === ':'
       }
-    } else if (c === '{') {
-      stack.push({ obj: true, key: '', index: 0 })
-      i++
-    } else if (c === '[') {
-      stack.push({ obj: false, key: '', index: 0 })
+      if (isKey && top) {
+        top.key = s
+        const path = stack.map((f) => (f.obj ? f.key : f.index))
+        out.push({ kind: 'key', text: s, line: startLine, startCol, endCol, path, id: pathId(path) })
+      } else {
+        out.push({ kind: 'value', text: s, line: startLine, startCol, endCol, path: [], id: '' })
+      }
+    } else if (c === '{' || c === '[') {
+      stack.push({ obj: c === '{', key: '', index: 0 })
       i++
     } else if (c === '}' || c === ']') {
       stack.pop()
@@ -89,6 +113,15 @@ export function scanKeys(text: string): KeyEntry[] {
     } else {
       i++
     }
+  }
+  return out
+}
+
+/** JSONテキスト中の全てのキーについて 行・キー名・パス を返す */
+export function scanKeys(text: string): KeyEntry[] {
+  const out: KeyEntry[] = []
+  for (const t of scanStrings(text)) {
+    if (t.kind === 'key') out.push({ line: t.line, key: t.text, path: t.path, id: t.id })
   }
   return out
 }

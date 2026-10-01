@@ -629,3 +629,47 @@ input[type='checkbox'].switch:checked::after {
 .ign-dot.hover::before {
   opacity: 0.4;
 }
+
+/* 未翻訳行の表示 */
+:root {
+  --warn: #b26a00;
+}
+:root[data-theme='dark'] {
+  --warn: #e0a24a;
+}
+.un-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.un-bar {
+  margin: 0 0 8px;
+}
+.un-label {
+  color: var(--warn);
+  font-weight: 600;
+}
+.un-chip,
+.un-more {
+  padding: 0 8px;
+  font-size: 12px;
+}
+.rbadge {
+  color: var(--warn);
+  font-size: 12px;
+}
+.acc-bar {
+  flex-wrap: wrap;
+}
+.acc-bar .un-list {
+  flex: 1;
+}
+
+#lang-grid .lsep {
+  grid-column: 1 / -1;
+  height: 1px;
+  margin: 2px 0;
+  background: var(--border);
+}
