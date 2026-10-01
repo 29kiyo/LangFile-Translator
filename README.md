@@ -1,1 +1,90 @@
 # json-translator
+
+JSON などの言語ファイルを、翻訳 API やローカル LLM で自動翻訳するデスクトップアプリです (Windows)。Electron + TypeScript 製。
+
+A desktop app that translates JSON language files with translation APIs or local LLMs (Windows).
+
+## 特長
+
+- 翻訳プロバイダー: Gemini / Claude / ChatGPT / Google Translate / DeepL / LM Studio / Ollama / LibreTranslate (API・ローカル実行)
+- 同じプロバイダーを複数登録、優先順位 (ドラッグ&ドロップ)、障害・トークン不足時の自動フォールバック、複数プロバイダーでの並列翻訳 (分配)
+- 約140言語。検索して複数選択し、一括翻訳。出力ファイル名は `ja_jp.json` / `ja.json` 形式を選択可
+- JSON 構造維持 / キーも翻訳。無視キー (カンマ区切り、または行番号横の赤い点で行単位)。`{0}` `%s` などのプレースホルダを保護
+- 翻訳されなかった行の表示・移動・再翻訳
+- ファイル選択 / ドラッグ&ドロップ、左右分割の行番号付きエディタ (Monaco)、個別・一括ダウンロード (ZIP / フォルダ)
+- ダーク / ライトテーマ、表示言語 (英語・日本語。PC の言語に自動で合わせる)
+
+## 動作確認の状況
+
+実際のサービスやアプリに接続して動作を確認したのは **LM Studio のみ** です。それ以外のプロバイダーは、実際には接続も翻訳も実行していません。リクエストの形式と応答の解釈を、モックを使った単体テストで確認しているだけなので、実際には動作しない場合があります。
+
+Only LM Studio has been tested against a real service. The other providers are covered by mock-based unit tests only and have not been run against the real services.
+
+| プロバイダー | 実機での動作確認 | 確認の内容 |
+|---|---|---|
+| LM Studio | 済み | 接続テスト、翻訳、フォールバック、並列翻訳 (分配) |
+| Gemini | 未実施 | モックを使った単体テストのみ |
+| Claude | 未実施 | 同上 |
+| ChatGPT (OpenAI) | 未実施 | 同上 |
+| Google Translate | 未実施 | 同上 |
+| DeepL | 未実施 | 同上 |
+| Ollama | 未実施 | 同上 |
+| LibreTranslate (API / ローカル実行) | 未実施 | 同上 |
+
+動作しない場合は、GitHub の Issues でお知らせください。
+
+## ダウンロード
+
+GitHub の Actions の実行結果 (Artifacts) から、次のいずれかを取得できます。
+
+| 種類 | ファイル | 使い方 |
+|---|---|---|
+| インストーラー | `json-translator-<version>-setup.exe` | 実行してインストール (管理者権限は不要) |
+| zip | `json-translator-<version>-win.zip` | 展開して `json-translator.exe` を実行 |
+| ポータブル | `json-translator-<version>-portable.exe` | そのまま実行 (インストール不要) |
+
+署名していないため、初回の起動時に Windows SmartScreen の警告が出ることがあります。「詳細情報」→「実行」で起動できます。
+
+## 使い方
+
+1. 「プロバイダー」画面で、使うプロバイダーを登録して「接続テスト」を押す (LM Studio は、ローカルサーバーを起動しておく)。
+2. 「エディタ」画面で、ファイルを選択またはドロップする (直接入力もできる)。
+3. 「対象言語」で、翻訳先の言語を選ぶ。1つなら右のエディタに、2つ以上なら結果一覧に出る。
+4. 「翻訳」を押して、ダウンロードする。出力先と一括ダウンロードの方式は、「設定」画面で選ぶ。
+
+## 注意
+
+- 設定は `%APPDATA%\json-translator\settings.json` に保存されます。API キーは平文で保存されます。
+
+## 開発
+
+npm install
+npm run dev # 開発用に起動
+npm test # 単体テスト
+npm run typecheck # 型チェック
+
+
+exe のビルドは GitHub Actions (`.github/workflows/build.yml`) で行います。ローカルにビルド環境は不要です。
+
+## 更新履歴
+
+### v2.0.0 (開発中)
+
+- 対応するファイル形式の追加 (予定): ARB、INI、.properties / .lang、CSV / TSV、YAML、PO / POT、Android の strings.xml
+- 元ファイルの拡張子から形式を自動で判定し、翻訳の方法を切り替える (予定)
+- 表示言語を JSON ファイルで追加できる機能 (v1.0.0 では未実装)
+- 汎用の XML と TOML には対応しません
+
+### v1.0.0
+
+初版です。JSON ファイルの翻訳に対応しています。
+
+- 翻訳プロバイダー 8 種の登録、同じプロバイダーの複数登録、優先順位 (ドラッグ&ドロップ)、障害・トークン不足時の自動フォールバック、複数プロバイダーでの並列翻訳 (分配)
+- 翻訳モード: 値のみ翻訳 / キーも翻訳。無視キー (カンマ区切り、または行番号横の赤い点で行単位)、プレースホルダ (`{0}` `%s` など) の保護
+- 約 140 言語から翻訳先を検索して選択。1 言語なら右のエディタに、2 言語以上なら結果一覧に自動で切り替わり、一括で翻訳できる。結果一覧は、行を開いて編集・保存できる
+- 出力ファイル名は `ja_jp.json` / `ja.json` 形式を選べる。個別・一括ダウンロード (ZIP / 出力先フォルダ)
+- 翻訳されなかった行の表示、その行への移動、右クリックでの対象外、赤い点とボタンでの再翻訳
+- 行番号付きの左右分割エディタ (Monaco)、ファイル選択・ドラッグ&ドロップ
+- ダーク / ライトテーマ、表示言語 (英語・日本語。PC の言語に自動で合わせる)
+- 配布物: ポータブル exe / zip / Inno Setup のインストーラー (GitHub Actions でビルド)
+- 実機で動作を確認したのは LM Studio のみ (詳細は「動作確認の状況」)
