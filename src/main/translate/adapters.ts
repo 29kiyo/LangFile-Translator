@@ -1,5 +1,5 @@
 import type { Provider } from '@shared/types'
-import { langName } from './core.ts'
+import { langName } from '../../shared/translate-core.ts'
 
 export interface Adapter {
   maxItems: number

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { extract, parseIgnoreKeys } from '../src/main/translate/core.ts'
+import { extract, parseIgnoreKeys } from '../src/shared/translate-core.ts'
 import { pathId, scanStrings } from '../src/shared/keyscan.ts'
 import type { Marks } from '../src/shared/keyscan.ts'
 import { findUntranslated, needsTranslation } from '../src/shared/untranslated.ts'

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { isIgnored, pathId, scanKeys } from '../src/shared/keyscan.ts'
-import { extract } from '../src/main/translate/core.ts'
+import { extract } from '../src/shared/translate-core.ts'
 
 const SRC = `{
   "title": "Hello",

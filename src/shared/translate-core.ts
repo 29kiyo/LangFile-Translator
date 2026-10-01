@@ -1,5 +1,5 @@
-import type { KeyPath, Marks } from '../../shared/keyscan.ts'
-import { isIgnored } from '../../shared/keyscan.ts'
+import type { KeyPath, Marks } from './keyscan.ts'
+import { isIgnored } from './keyscan.ts'
 
 export type Mode = 'structure' | 'keys'
 

@@ -2,8 +2,8 @@ import type { Provider } from '@shared/types'
 import type { Marks } from '../../shared/keyscan.ts'
 import type { Adapter } from './adapters.ts'
 import { BadFormatError, createAdapter } from './adapters.ts'
-import type { Mode } from './core.ts'
-import { extract, makeBatches, parseIgnoreKeys, protect, restore } from './core.ts'
+import type { Mode } from '../../shared/translate-core.ts'
+import { extract, makeBatches, parseIgnoreKeys, protect, restore } from '../../shared/translate-core.ts'
 
 export interface EngineOptions {
   providers: Provider[]

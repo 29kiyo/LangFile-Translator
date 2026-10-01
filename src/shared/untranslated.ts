@@ -1,9 +1,9 @@
-import type { Mode } from '../main/translate/core.ts'
-import { isTranslatable, protect } from '../main/translate/core.ts'
+import type { Mode } from './translate-core.ts'
+import { isTranslatable, protect } from './translate-core.ts'
 import type { KeyPath, Marks } from './keyscan.ts'
 import { isIgnored, scanStrings } from './keyscan.ts'
 
-export { parseIgnoreKeys } from '../main/translate/core.ts'
+export { parseIgnoreKeys } from './translate-core.ts'
 
 export interface Untranslated {
   /** 出力テキストの行 (1始まり) */

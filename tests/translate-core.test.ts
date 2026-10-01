@@ -7,7 +7,7 @@ import {
   parseIgnoreKeys,
   protect,
   restore
-} from '../src/main/translate/core.ts'
+} from '../src/shared/translate-core.ts'
 
 test('structure mode: values only, ignore keys, non-strings kept', () => {
   const json = {
