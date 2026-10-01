@@ -1,0 +1,70 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci
+          # electron のバイナリが入らないことがあるため、念のため実行する
+          node node_modules/electron/install.js
+
+      - name: Test and typecheck
+        run: |
+          npm test
+          npm run typecheck
+
+      - name: Build app
+        run: npm run build
+
+      - name: Package (portable exe and unpacked app)
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: List output
+        run: ls -la release
+
+      - name: Installer (Inno Setup) and zip
+        shell: pwsh
+        run: |
+          $v = node -p "require('./package.json').version"
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
+          & $iscc "/DAppVersion=$v" installer\json-translator.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
+          $name = "json-translator-$v-win"
+          Rename-Item release\win-unpacked $name
+          Compress-Archive -Path "release\$name" -DestinationPath "release\$name.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: portable-exe
+          path: release/*-portable.exe
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip
+          path: release/*-win.zip
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: installer
+          path: release/*-setup.exe
+          if-no-files-found: error
