@@ -1,18 +1,19 @@
 name: build
 
+# main へのプッシュ: テスト・型チェック・翻訳キーの点検・ビルドだけ (配布物は作らない)
+# Run workflow (version に v1.0.0 のように入力): 上に加えて、パッケージ作成・タグ・GitHub Release (配布物を添付)
 on:
   push:
     branches: [main]
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to build (e.g. v1.0.0). Empty = 0.0.0-dev.<run number>'
-        required: false
-        default: ''
+        description: 'Version to release (e.g. v1.0.0). A tag and a GitHub Release are created.'
+        required: true
         type: string
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   windows:
@@ -22,6 +23,25 @@ jobs:
         shell: bash
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check version
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          INPUT_VERSION: ${{ inputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          V="${INPUT_VERSION#v}"
+          V="${V#V}"
+          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "Invalid version: '${INPUT_VERSION}' (example: v1.0.0)"
+            exit 1
+          fi
+          if gh release view "v$V" > /dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/v$V" > /dev/null 2>&1; then
+            echo "v$V already exists (tag or release). Use another version, or delete the release and the tag first."
+            exit 1
+          fi
+          echo "VERSION=$V" >> "$GITHUB_ENV"
 
       - uses: actions/setup-node@v4
         with:
@@ -35,19 +55,11 @@ jobs:
           node node_modules/electron/install.js
 
       - name: Set version
-        env:
-          INPUT_VERSION: ${{ inputs.version }}
+        if: github.event_name == 'workflow_dispatch'
         run: |
-          V="${INPUT_VERSION#v}"
-          V="${V#V}"
-          if [ -z "$V" ]; then V="0.0.0-dev.${GITHUB_RUN_NUMBER}"; fi
-          if ! echo "$V" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
-            echo "Invalid version: '${INPUT_VERSION}' (example: v1.0.0)"
-            exit 1
-          fi
           # package.json の version を、入力された値に書き換える (ビルド用の作業コピーのみ。コミットはされない)
-          npm version "$V" --no-git-tag-version --allow-same-version
-          echo "Building version $V"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          echo "Building version $VERSION"
 
       - name: Test and typecheck
         run: |
@@ -59,12 +71,13 @@ jobs:
         run: npm run build
 
       - name: Package (portable exe and unpacked app)
-        run: npx electron-builder --win --x64 --publish never
-
-      - name: List output
-        run: ls -la release
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          npx electron-builder --win --x64 --publish never
+          ls -la release
 
       - name: Installer (Inno Setup) and zip
+        if: github.event_name == 'workflow_dispatch'
         shell: pwsh
         run: |
           $v = node -p "require('./package.json').version"
@@ -76,20 +89,16 @@ jobs:
           Rename-Item release\win-unpacked $name
           Compress-Archive -Path "release\$name" -DestinationPath "release\$name.zip"
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: portable-exe
-          path: release/*-portable.exe
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: zip
-          path: release/*-win.zip
-          if-no-files-found: error
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: installer
-          path: release/*-setup.exe
-          if-no-files-found: error
+      - name: Create tag and GitHub Release
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls release/*-setup.exe release/*-win.zip release/*-portable.exe
+          # README の更新履歴 (### vX.Y.Z の節) をリリースの説明にする。無ければ自動生成する
+          tr -d '\r' < README.md | awk -v h="### v$VERSION" '$0==h{f=1;next} f&&(/^## /||/^### /){exit} f' > release-notes.md
+          ARGS=(--title "v$VERSION" --target "$GITHUB_SHA")
+          if [ -s release-notes.md ]; then ARGS+=(--notes-file release-notes.md); else ARGS+=(--generate-notes); fi
+          case "$VERSION" in *-*) ARGS+=(--prerelease) ;; esac
+          gh release create "v$VERSION" release/*-setup.exe release/*-win.zip release/*-portable.exe "${ARGS[@]}"
