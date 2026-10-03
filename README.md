@@ -8,8 +8,9 @@ A Windows desktop app that automatically translates JSON language files with tra
 
 - 翻訳プロバイダー: Gemini / Claude / ChatGPT / Google Translate / DeepL / LM Studio / Ollama / LibreTranslate (API・ローカル実行)
 - 同じプロバイダーの複数登録、優先順位 (ドラッグ&ドロップ)、障害・トークン不足時の自動フォールバック、複数プロバイダーでの並列翻訳 (分配)
-- 約 140 言語。検索して複数選択し、一括で翻訳。出力ファイル名は `ja_jp.json` / `ja.json` 形式を選べる
-- JSON 構造維持 / キーも翻訳。無視キー (カンマ区切り、または行番号横の赤い点で行単位)。`{0}` `%s` などのプレースホルダを保護
+- 約 150 言語。検索して複数選択し、一括で翻訳。出力ファイル名は、元の名前の言語コードに合わせて決まる (`en_US.json` → `ja_JP.json`、`en.json` → `ja.json`)
+- 対応形式: JSON / ARB / INI / .properties・.lang / CSV・TSV / YAML / PO・POT / Android の `strings.xml`。拡張子で自動判定する
+- JSON 構造維持 / キーも翻訳 (キーも翻訳は JSON のみ)。無視キー (カンマ区切り、または行番号横の赤い点で行単位)。`{0}` `%s` などのプレースホルダを保護
 - 翻訳されなかった行の表示・移動・再翻訳
 - ファイル選択 / ドラッグ&ドロップ、左右分割の行番号付きエディタ (Monaco)、個別・一括ダウンロード (ZIP / フォルダ)
 - ダーク / ライトテーマ、表示言語 (英語・日本語。PC の言語に自動で合わせる。JSON ファイルで言語を追加できる)
@@ -18,8 +19,9 @@ English:
 
 - Providers: Gemini / Claude / ChatGPT / Google Translate / DeepL / LM Studio / Ollama / LibreTranslate (API and local run)
 - Register the same provider more than once, set priorities (drag and drop), automatic fallback on errors or out-of-tokens, and parallel translation with several providers (distribution)
-- About 140 languages. Search, select several, and translate them all at once. Output file names can be `ja_jp.json` or `ja.json` style
-- Keep the JSON structure or translate the keys too. Ignore keys (comma-separated, or per line with the red dot next to the line number). Placeholders such as `{0}` and `%s` are protected
+- About 150 languages. Search, select several, and translate them all at once. Output file names follow the language code in the source name (`en_US.json` → `ja_JP.json`, `en.json` → `ja.json`)
+- Supported formats: JSON / ARB / INI / .properties and .lang / CSV and TSV / YAML / PO and POT / Android `strings.xml`. The format is detected from the extension
+- Keep the JSON structure or translate the keys too (translating keys is JSON only). Ignore keys (comma-separated, or per line with the red dot next to the line number). Placeholders such as `{0}` and `%s` are protected
 - Shows untranslated lines, jumps to them, and retranslates them
 - File picker and drag and drop, a split editor with line numbers (Monaco), individual and bulk download (ZIP or folder)
 - Dark and light themes, UI language (English and Japanese, follows the PC language, more languages can be added as JSON files)
@@ -49,6 +51,10 @@ If something does not work, please open an issue on GitHub.
 | Ollama | 未実施 / Not tested | 同上 / Same |
 | LibreTranslate (API / ローカル実行 / local) | 未実施 / Not tested | 同上 / Same |
 
+各ファイル形式 (ARB / INI / .properties・.lang / CSV・TSV / YAML / PO・POT / strings.xml) は、サンプルファイルでの翻訳・保存と、単体テストで確認しています。
+
+Each file format (ARB / INI / .properties and .lang / CSV and TSV / YAML / PO and POT / strings.xml) has been checked with sample files and unit tests.
+
 ## ダウンロード / Download
 
 [Releases ページ](https://github.com/29kiyo/json-translator/releases) から、次のいずれかを取得できます。
@@ -71,6 +77,8 @@ You can get any of the files above from the [Releases page](https://github.com/2
 2. 「エディタ」画面で、ファイルを選択またはドロップする (直接入力もできる)。
 3. 「対象言語」で、翻訳先の言語を選ぶ。1つなら右のエディタに、2つ以上なら結果一覧に出る。
 4. 「翻訳」を押して、ダウンロードする。出力先と一括ダウンロードの方式は、「設定」画面で選ぶ。
+5. CSV / TSV は、翻訳する列を、エディタ上のチェックボックスで選ぶ (先頭行が見出しでないときは、「先頭行は見出し」を切る)。
+6. Android の `strings.xml` は、`values-ja/strings.xml` のように、言語ごとのフォルダを作って保存される。
 
 English:
 
@@ -78,6 +86,8 @@ English:
 2. On the "Editor" tab, choose a file or drop it in (you can also type directly).
 3. Under "Target languages", choose the languages to translate into. One language shows the result in the right editor; two or more show a results list.
 4. Press "Translate", then download. The output folder and the bulk download method are set on the "Settings" tab.
+5. For CSV / TSV, choose the columns to translate with the checkboxes above the editor (turn off "First row is a header" if there is no header row).
+6. Android `strings.xml` is saved into a folder per language, such as `values-ja/strings.xml`.
 
 ## 表示言語の追加 / Adding a UI language
 
@@ -105,6 +115,10 @@ English: you can add UI languages as JSON files from "Settings" → "Add UI lang
 
 - 設定は `%APPDATA%\json-translator\settings.json` に保存されます。API キーは平文で保存されます。
 - Settings are saved in `%APPDATA%\json-translator\settings.json`. API keys are stored in plain text.
+- ファイル形式ごとの制限: YAML の `|` `>` の複数行・アンカー・タグ付きの値、CSV の複数行のセル、PO の値が入っている `msgstr`、`translatable="false"` の Android の項目は翻訳せずそのまま残す。`strings.xml` 以外の `.xml` と TOML には対応しない。PO の複数形は、ファイルにある `msgstr[n]` だけを埋める (`Plural-Forms` は変えない)。CSV は UTF-8 のみ。
+- 言語コードのような値 (INI の `lang=en` など) も翻訳対象になる。外したいときは、無視キーに入れるか、行番号横の赤い点で外す。
+- Format limits: YAML block scalars (`|` `>`), anchored or tagged values, multi-line CSV cells, PO entries whose `msgstr` is already filled, and Android items with `translatable="false"` are left as they are. `.xml` files other than `strings.xml`, and TOML, are not supported. For PO plurals, only the `msgstr[n]` entries present in the file are filled (`Plural-Forms` is not changed). CSV must be UTF-8.
+- Values that are language codes (such as `lang=en` in INI) are also translated. Put the key in the ignore keys, or turn it off with the red dot next to the line number.
 
 ## 開発 / Development
 
@@ -129,17 +143,21 @@ Builds and releases are done with GitHub Actions (`.github/workflows/build.yml`)
 
 ## 更新履歴 / Changelog
 
-### v2.0.0 (開発中 / in development)
+### v2.0.0
 
-- 対応するファイル形式の追加 (予定): ARB、INI、.properties / .lang、CSV / TSV、YAML、PO / POT、Android の strings.xml
-- 元ファイルの拡張子から形式を自動で判定し、翻訳の方法を切り替える (予定)
+- 対応するファイル形式を追加: ARB、INI、.properties / .lang、CSV / TSV (翻訳する列を選べる)、YAML、PO / POT、Android の strings.xml (`values-ja/strings.xml` の形で保存)
+- 元ファイルの拡張子から形式を自動で判定し、翻訳の方法を切り替える
+- 出力ファイル名を、元の名前の言語コードに合わせて決める方式に変更 (`en_US` → `ja_JP`、`en` → `ja`)。「出力ファイル名の形式」の設定は廃止
+- 言語を追加: 中国語 (香港)、英語 (イギリス)、スペイン語 (メキシコ)、フランス語 (カナダ)、セルビア語 (ラテン文字)、ノルウェー語 (ブークモール / ニーノシュク)、フィリピン語、広東語
 - 汎用の XML と TOML には対応しません
 
 English:
 
-- Planned: more file formats (ARB, INI, .properties / .lang, CSV / TSV, YAML, PO / POT, Android strings.xml)
-- Planned: detect the format from the file extension and switch the translation method automatically
-- Generic XML and TOML will not be supported
+- Added file formats: ARB, INI, .properties / .lang, CSV / TSV (choose the columns to translate), YAML, PO / POT, Android strings.xml (saved as `values-ja/strings.xml`)
+- The format is detected from the file extension and the translation method switches automatically
+- Output file names now follow the language code in the source name (`en_US` → `ja_JP`, `en` → `ja`). The "Output file name" setting was removed
+- Added languages: Chinese (Hong Kong), English (UK), Spanish (Mexico), French (Canada), Serbian (Latin), Norwegian (Bokmål / Nynorsk), Filipino, Cantonese
+- Generic XML and TOML are not supported
 
 ### v1.0.0
 
