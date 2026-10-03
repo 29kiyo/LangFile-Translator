@@ -1,6 +1,6 @@
 import type { KeyPath } from '../keyscan.ts'
 
-export type FormatId = 'json' | 'arb' | 'ini' | 'properties' | 'lang' | 'csv' | 'tsv' | 'csv-nh' | 'tsv-nh'
+export type FormatId = 'json' | 'arb' | 'ini' | 'properties' | 'lang' | 'csv' | 'tsv' | 'csv-nh' | 'tsv-nh' | 'yaml'
 
 /** 1つの値 (翻訳対象の候補)。位置は Monaco と同じ列 (1始まり、endCol は含まない) */
 export interface Entry {
@@ -13,8 +13,10 @@ export interface Entry {
   endCol: number
   /** デコード済みの値 */
   text: string
-  /** 元が引用符付き (CSV) */
+  /** 元が引用符付き (CSV / YAML) */
   quoted?: boolean
+  /** 元の引用符の文字 (YAML: ' または ") */
+  raw?: string
   /** 翻訳しない (複数行のセルなど) */
   skip?: boolean
 }

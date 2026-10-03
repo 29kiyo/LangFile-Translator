@@ -8,6 +8,7 @@ import { findUntranslated, needsTranslation } from '../untranslated.ts'
 import type { Entry, FormatId, SegmentFormat } from './types.ts'
 import { INI, LANG, PROPERTIES } from './line.ts'
 import { CSV, CSV_NH, TSV, TSV_NH, csvColumns, detectDelim } from './csv.ts'
+import { YAML } from './yaml.ts'
 
 export type { Entry, FormatId, SegmentFormat }
 
@@ -18,7 +19,8 @@ const SEGMENT: Partial<Record<FormatId, SegmentFormat>> = {
   csv: CSV,
   tsv: TSV,
   'csv-nh': CSV_NH,
-  'tsv-nh': TSV_NH
+  'tsv-nh': TSV_NH,
+  yaml: YAML
 }
 const EXT: Record<string, FormatId> = {
   json: 'json',
@@ -27,7 +29,9 @@ const EXT: Record<string, FormatId> = {
   properties: 'properties',
   lang: 'lang',
   csv: 'csv',
-  tsv: 'tsv'
+  tsv: 'tsv',
+  yaml: 'yaml',
+  yml: 'yaml'
 }
 
 /** 拡張子が無いとき (直接入力) は内容から推定する */
