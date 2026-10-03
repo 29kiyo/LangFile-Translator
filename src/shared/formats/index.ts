@@ -7,11 +7,28 @@ import type { Untranslated } from '../untranslated.ts'
 import { findUntranslated, needsTranslation } from '../untranslated.ts'
 import type { Entry, FormatId, SegmentFormat } from './types.ts'
 import { INI, LANG, PROPERTIES } from './line.ts'
+import { CSV, CSV_NH, TSV, TSV_NH, csvColumns, detectDelim } from './csv.ts'
 
 export type { Entry, FormatId, SegmentFormat }
 
-const SEGMENT: Partial<Record<FormatId, SegmentFormat>> = { ini: INI, properties: PROPERTIES, lang: LANG }
-const EXT: Record<string, FormatId> = { json: 'json', arb: 'arb', ini: 'ini', properties: 'properties', lang: 'lang' }
+const SEGMENT: Partial<Record<FormatId, SegmentFormat>> = {
+  ini: INI,
+  properties: PROPERTIES,
+  lang: LANG,
+  csv: CSV,
+  tsv: TSV,
+  'csv-nh': CSV_NH,
+  'tsv-nh': TSV_NH
+}
+const EXT: Record<string, FormatId> = {
+  json: 'json',
+  arb: 'arb',
+  ini: 'ini',
+  properties: 'properties',
+  lang: 'lang',
+  csv: 'csv',
+  tsv: 'tsv'
+}
 
 /** 拡張子が無いとき (直接入力) は内容から推定する */
 export function inferFormat(text: string): FormatId {
@@ -49,6 +66,8 @@ export function effectiveIgnore(format: FormatId, text: string, ignore: Set<stri
 export function keyEntries(format: FormatId, text: string): KeyEntry[] {
   const seg = SEGMENT[format]
   if (!seg) return scanKeys(text)
+  // CSV は列単位で選ぶ (行ごとの赤い点は出さない)
+  if (isCsv(format)) return []
   return seg.scan(text).map((e) => ({ line: e.line, key: e.key, path: e.path, id: e.id }))
 }
 
@@ -61,7 +80,7 @@ export interface Plan {
 export function planSegments(format: FormatId, text: string, ignore: Set<string>, marks?: Marks): Plan | null {
   const fmt = SEGMENT[format]
   if (!fmt) return null
-  const active = fmt.scan(text).filter((e) => !isIgnoredId(e.key, e.id, ignore, marks) && isTranslatable(e.text))
+  const active = fmt.scan(text).filter((e) => !e.skip && !isIgnoredId(e.key, e.id, ignore, marks) && isTranslatable(e.text))
   return {
     texts: [...new Set(active.map((e) => e.text))],
     build: (m) =>
@@ -73,7 +92,7 @@ export function planSegments(format: FormatId, text: string, ignore: Set<string>
             line: e.line,
             startCol: e.startCol,
             endCol: e.endCol,
-            text: fmt.encode(m.get(e.text) as string)
+            text: fmt.encode(m.get(e.text) as string, e)
           }))
       )
   }
@@ -117,9 +136,30 @@ export function findUntranslatedFor(
     const s = src[i]
     const o = out[i]
     if (s.key !== o.key) return []
-    if (isIgnoredId(s.key, s.id, ign, marks) || dismissed?.has(i)) continue
+    if (s.skip || isIgnoredId(s.key, s.id, ign, marks) || dismissed?.has(i)) continue
     if (s.text !== o.text || !needsTranslation(s.text)) continue
     res.push({ line: o.line, idx: i, kind: 'value', source: s.text, startCol: o.startCol, endCol: o.endCol })
   }
   return res
 }
+
+/** CSV / TSV 系の形式 (csv-nh / tsv-nh は見出し行なし) */
+export const isCsv = (f: FormatId): boolean => f === 'csv' || f === 'tsv' || f === 'csv-nh' || f === 'tsv-nh'
+export const hasHeader = (f: FormatId): boolean => f === 'csv' || f === 'tsv'
+
+/** 見出し行の有無を切り替えた形式 (CSV / TSV 以外はそのまま) */
+export function withHeader(f: FormatId, header: boolean): FormatId {
+  if (!isCsv(f)) return f
+  const base = f.startsWith('tsv') ? 'tsv' : 'csv'
+  return (header ? base : `${base}-nh`) as FormatId
+}
+
+/** CSV の列名 (左から、重複なし。見出しが無い・空の列は列番号) */
+export function csvColumnNames(f: FormatId, text: string): string[] {
+  if (!isCsv(f)) return []
+  const delim = f.startsWith('tsv') ? '\t' : detectDelim(text)
+  return [...new Set(csvColumns(text, delim, hasHeader(f)))]
+}
+
+/** 出力ファイルの既定の拡張子 */
+export const extFor = (f: FormatId): string => (isCsv(f) ? f.slice(0, 3) : f)

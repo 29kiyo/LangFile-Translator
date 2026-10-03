@@ -56,3 +56,8 @@ test('arb: @ のキーはそのまま、@@locale は翻訳先、キー翻訳モ�
   assert.equal(o.hi, '[Hello]')
   assert.equal(o['@hi'].description, 'greeting')
 })
+
+test('csv: 列を選んで翻訳 (無視キー)、引用符を保つ', async () => {
+  const r = await run('id,text,note\nbtn,Hello,"Hi, you"\n', 'csv', { ignoreKeys: 'id,note' })
+  assert.equal(r.text, 'id,text,note\nbtn,[Hello],"Hi, you"\n')
+})
