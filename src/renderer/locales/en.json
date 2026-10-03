@@ -76,6 +76,8 @@
   "err.busy": "Another translation is running",
   "err.jsonParse": "Not valid JSON",
   "err.unsupported": "Unsupported file format ({ext})",
+  "csv.header": "First row is a header",
+  "csv.columns": "Columns to translate:",
   "settings.section.display": "Display",
   "settings.section.output": "Output",
   "settings.section.other": "Other",

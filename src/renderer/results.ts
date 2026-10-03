@@ -5,7 +5,7 @@ import type { BulkFile } from '@shared/types'
 import { nativeName } from './langpicker'
 import type { Marks } from '@shared/keyscan'
 import { parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
-import { findUntranslatedFor, type FormatId } from '@shared/formats/index'
+import { extFor, findUntranslatedFor, type FormatId } from '@shared/formats/index'
 import { renderUntranslated, uniqueLines } from './unview'
 import { applyReplacements } from '@shared/textedit'
 import { retranslate } from './retry'
@@ -356,7 +356,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const next: Result[] = []
     for (const code of codes) {
       const l = getLanguage(code)
-      if (l) next.push({ code, file: outputName(deps.getSourceName(), l, s.fileNameStyle, opt.format), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
+      if (l) next.push({ code, file: outputName(deps.getSourceName(), l, s.fileNameStyle, extFor(opt.format)), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
     }
     results = next
     openIdx = -1

@@ -76,6 +76,8 @@
   "err.busy": "別の翻訳を実行中です",
   "err.jsonParse": "JSON として読み込めません",
   "err.unsupported": "未対応のファイル形式です ({ext})",
+  "csv.header": "先頭行は見出し",
+  "csv.columns": "翻訳する列:",
   "settings.section.display": "表示",
   "settings.section.output": "出力",
   "settings.section.other": "その他",

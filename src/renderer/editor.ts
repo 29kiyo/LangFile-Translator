@@ -7,9 +7,19 @@ import type { LangPicker } from './langpicker'
 import { getLanguage } from '@shared/languages'
 import { outputName } from '@shared/outname'
 import { initResults } from './results'
-import { isIgnoredId, type KeyEntry, type Marks } from '@shared/keyscan'
+import { isIgnoredId, pathId, type KeyEntry, type Marks } from '@shared/keyscan'
 import type { Untranslated } from '@shared/untranslated'
-import { detectFormat, findUntranslatedFor, keyEntries, supportsKeyMode, type FormatId } from '@shared/formats/index'
+import {
+  csvColumnNames,
+  detectFormat,
+  extFor,
+  findUntranslatedFor,
+  isCsv,
+  keyEntries,
+  supportsKeyMode,
+  withHeader,
+  type FormatId
+} from '@shared/formats/index'
 import { renderUntranslated } from './unview'
 import { retranslate } from './retry'
 import { errText } from './errtext'
@@ -40,7 +50,8 @@ export function initEditor(t: (key: string) => string, picker: LangPicker): void
   const right = monaco.editor.create($('editor-right'), { ...options, glyphMargin: true })
 
   let currentName = ''
-  const fmtOr = (): FormatId => detectFormat(currentName, left.getValue()) ?? 'json'
+  let csvHeader = true
+  const fmtOr = (): FormatId => withHeader(detectFormat(currentName, left.getValue()) ?? 'json', csvHeader)
   const unsupportedText = (): string =>
     t('err.unsupported').replace('{ext}', /\.[^.\\/]+$/.exec(currentName)?.[0] ?? '')
 
@@ -104,7 +115,7 @@ $('btn-pick').addEventListener('click', async () => {
     const l = code ? getLanguage(code) : undefined
     if (!l) return currentName || 'output.json'
     const style = (await window.api.getSettings()).fileNameStyle
-    return outputName(currentName, l, style, lastCtx?.format ?? 'json')
+    return outputName(currentName, l, style, extFor(lastCtx?.format ?? 'json'))
   }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()
@@ -145,7 +156,8 @@ $('btn-pick').addEventListener('click', async () => {
       trStatus.textContent = t('tr.noSource')
       return
     }
-    const fmt = detectFormat(currentName, src)
+    const fmt0 = detectFormat(currentName, src)
+    const fmt = fmt0 === null ? null : withHeader(fmt0, csvHeader)
     if (fmt === null) {
       trStatus.textContent = unsupportedText()
       return
@@ -261,6 +273,7 @@ $('btn-pick').addEventListener('click', async () => {
     // 「キーも翻訳」は JSON のみ
     const keysOpt = trMode.querySelector('option[value="keys"]') as HTMLOptionElement | null
     if (keysOpt) keysOpt.disabled = !supportsKeyMode(fmtOr())
+    renderCsv()
   }
 
   const toggleLine = (line: number): void => {
@@ -278,6 +291,47 @@ $('btn-pick').addEventListener('click', async () => {
     redraw()
   }
 
+  // --- CSV / TSV: 翻訳する列の選択 (列名 = キー、識別子 = pathId([列名])。行マーカーと同じ marks に載せる) ---
+  const csvBar = $('csv-bar')
+  const csvCols = $('csv-cols')
+  const csvHeaderChk = $<HTMLInputElement>('csv-header')
+  const toggleCol = (name: string): void => {
+    const id = pathId([name])
+    const ign = keyList()
+    const on = isIgnoredId(name, id, ign, marks)
+    if (ign.has(name)) {
+      marks.marked.delete(id)
+      if (on) marks.released.add(id)
+      else marks.released.delete(id)
+    } else if (on) marks.marked.delete(id)
+    else marks.marked.add(id)
+  }
+  const renderCsv = (): void => {
+    const f = fmtOr()
+    csvBar.hidden = !isCsv(f)
+    csvCols.replaceChildren()
+    if (!isCsv(f)) return
+    const ign = keyList()
+    for (const name of csvColumnNames(f, left.getValue())) {
+      const lab = document.createElement('label')
+      lab.className = 'csv-col'
+      const cb = document.createElement('input')
+      cb.type = 'checkbox'
+      cb.checked = !isIgnoredId(name, pathId([name]), ign, marks)
+      cb.addEventListener('change', () => toggleCol(name))
+      const sp = document.createElement('span')
+      sp.textContent = name
+      lab.append(cb, sp)
+      csvCols.append(lab)
+    }
+  }
+  csvHeaderChk.addEventListener('change', () => {
+    csvHeader = csvHeaderChk.checked
+    marks.marked.clear()
+    marks.released.clear()
+    refreshFixed()
+  })
+
   left.onMouseMove((e) => {
     const n = e.target.position?.lineNumber ?? 0
     if (n !== hoverLine) {
@@ -294,7 +348,10 @@ $('btn-pick').addEventListener('click', async () => {
       toggleLine(e.target.position.lineNumber)
     }
   })
-  trIgnore.addEventListener('input', redraw)
+  trIgnore.addEventListener('input', () => {
+    redraw()
+    renderCsv()
+  })
   let markTimer = 0
   left.onDidChangeModelContent(() => {
     window.clearTimeout(markTimer)

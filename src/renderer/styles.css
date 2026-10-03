@@ -738,3 +738,31 @@ input[type='checkbox'].switch:checked::after {
   white-space: pre-wrap;
   font: 12px Consolas, monospace;
 }
+
+#csv-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+#csv-bar[hidden] {
+  display: none;
+}
+.csv-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#csv-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.csv-col {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
