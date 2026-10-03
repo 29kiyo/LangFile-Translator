@@ -1,6 +1,8 @@
 import type { Language } from './languages.ts'
 import { LANGUAGES, fileBaseName } from './languages.ts'
 import type { NameStyle } from './types.ts'
+import type { FormatId } from './formats/types.ts'
+import { extFor } from './formats/index.ts'
 
 const KNOWN = new Set(LANGUAGES.map((l) => l.code.split('-')[0]))
 
@@ -61,4 +63,16 @@ export function outputName(srcName: string, l: Language, style: NameStyle, defau
     name += (f.regionSep || '_') + r
   }
   return base.slice(0, f.start) + name + base.slice(f.end) + ext
+}
+
+/** Android のリソースフォルダ名 (ja → values-ja、zh-CN → values-zh-rCN) */
+export function androidDir(l: Language): string {
+  const [lang, region] = l.code.split('-')
+  return `values-${lang}${region ? `-r${region.toUpperCase()}` : ''}`
+}
+
+/** 保存する相対パス。Android は values-ja/strings.xml、それ以外は outputName */
+export function outputPath(srcName: string, l: Language, style: NameStyle, format: FormatId): string {
+  if (format === 'xml') return `${androidDir(l)}/strings.xml`
+  return outputName(srcName, l, style, extFor(format))
 }

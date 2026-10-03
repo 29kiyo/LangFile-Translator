@@ -64,7 +64,8 @@ test('未翻訳の判定 (properties)', () => {
 test('形式の判定', () => {
   assert.equal(detectFormat('a.ARB', ''), 'arb')
   assert.equal(detectFormat('en_us.lang', ''), 'lang')
-  assert.equal(detectFormat('strings.xml', ''), null)
+  assert.equal(detectFormat('strings.xml', ''), 'xml')
+  assert.equal(detectFormat('layout.xml', ''), null)
   assert.equal(detectFormat('', '{"a":1}'), 'json')
   assert.equal(detectFormat('', '[s]\nk=v'), 'ini')
   assert.equal(detectFormat('', 'k=v'), 'properties')

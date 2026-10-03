@@ -64,6 +64,23 @@ function uniquePath(dir: string, name: string): string {
   return p
 }
 
+/** "values-ja/strings.xml" のような相対パスを、出力先の中に収まる部品に分ける (.. や絶対パスは無効にする) */
+function safeParts(name: string): string[] {
+  return name
+    .split(/[\\/]+/)
+    .map((x) => x.replace(/[<>:"|?*]/g, '_'))
+    .filter((x) => x && !/^\.+$/.test(x))
+}
+
+/** 出力先の中にサブフォルダを作り、既存ファイルは上書きせず連番を付けたパスを返す */
+function uniqueRel(dir: string, name: string): string {
+  const parts = safeParts(name)
+  const file = parts.pop() || 'output'
+  const sub = join(dir, ...parts)
+  mkdirSync(sub, { recursive: true })
+  return uniquePath(sub, file)
+}
+
 const arr = (v: unknown): Record<string, unknown>[] => (Array.isArray(v) ? v : [])
 
 /** 接続テスト: モデル一覧 (または疎通確認用エンドポイント) を取得。APIキーはログに出さない */
@@ -240,7 +257,7 @@ app.whenReady().then(() => {
     const r = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'JSON / Text', extensions: ['json', 'arb', 'ini', 'properties', 'lang', 'csv', 'tsv', 'yaml', 'yml', 'po', 'pot', 'txt'] },
+        { name: 'JSON / Text', extensions: ['json', 'arb', 'ini', 'properties', 'lang', 'csv', 'tsv', 'yaml', 'yml', 'po', 'pot', 'xml', 'txt'] },
         { name: 'All', extensions: ['*'] }
       ]
     })
@@ -263,12 +280,12 @@ app.whenReady().then(() => {
     mkdirSync(dir, { recursive: true })
     if (settings.bulkMethod === 'zip') {
       const p = uniquePath(dir, basename(zipName))
-      writeFileSync(p, makeZip(files))
+      writeFileSync(p, makeZip(files.map((f) => ({ name: safeParts(f.name).join('/'), content: f.content }))))
       logCommand(`write zip ${p} (${files.length} files)`)
       return { path: p, count: files.length }
     }
     for (const f of files) {
-      const p = uniquePath(dir, basename(f.name))
+      const p = uniqueRel(dir, f.name)
       writeFileSync(p, f.content, 'utf-8')
       logCommand(`write file ${p}`)
     }
@@ -342,7 +359,7 @@ app.whenReady().then(() => {
   ipcMain.handle(IPC.saveFile, (_e, name: string, content: string) => {
     const dir = resolveOutputDir()
     mkdirSync(dir, { recursive: true })
-    const p = uniquePath(dir, basename(name))
+    const p = uniqueRel(dir, name)
     writeFileSync(p, content, 'utf-8')
     logCommand(`write file ${p}`)
     return p

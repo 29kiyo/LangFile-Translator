@@ -61,3 +61,18 @@ test('csv: 列を選んで翻訳 (無視キー)、引用符を保つ', async () 
   const r = await run('id,text,note\nbtn,Hello,"Hi, you"\n', 'csv', { ignoreKeys: 'id,note' })
   assert.equal(r.text, 'id,text,note\nbtn,[Hello],"Hi, you"\n')
 })
+
+test('xml: translatable="false" は残し、アポストロフィを Android 形式にする', async () => {
+  const src = [
+    '<resources>',
+    '    <string name="a">Hello</string>',
+    '    <string name="b" translatable="false">Keep</string>',
+    "    <string name=\"c\">It\\'s <b>fine</b></string>",
+    '</resources>',
+    ''
+  ].join('\n')
+  const r = await run(src, 'xml')
+  assert.ok(r.text.includes('<string name="a">[Hello]</string>'))
+  assert.ok(r.text.includes('>Keep</string>'))
+  assert.ok(r.text.includes("[It\\'s <b>fine</b>]"))
+})

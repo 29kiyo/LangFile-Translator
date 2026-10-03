@@ -10,6 +10,7 @@ import { INI, LANG, PROPERTIES } from './line.ts'
 import { CSV, CSV_NH, TSV, TSV_NH, csvColumns, detectDelim } from './csv.ts'
 import { YAML } from './yaml.ts'
 import { PO, finalizePo } from './po.ts'
+import { XML } from './xml.ts'
 
 export type { Entry, FormatId, SegmentFormat }
 
@@ -22,7 +23,8 @@ const SEGMENT: Partial<Record<FormatId, SegmentFormat>> = {
   'csv-nh': CSV_NH,
   'tsv-nh': TSV_NH,
   yaml: YAML,
-  po: PO
+  po: PO,
+  xml: XML
 }
 const EXT: Record<string, FormatId> = {
   json: 'json',
@@ -56,6 +58,8 @@ export function inferFormat(text: string): FormatId {
 export function detectFormat(name: string, text: string): FormatId | null {
   const m = /\.([^.\\/]+)$/.exec(name)
   if (!m) return inferFormat(text)
+  // Android は strings.xml だけ対応 (他の .xml は未対応)
+  if (/^strings\.xml$/i.test(name)) return 'xml'
   return EXT[m[1].toLowerCase()] ?? null
 }
 

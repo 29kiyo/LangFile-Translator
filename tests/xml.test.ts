@@ -45,3 +45,15 @@ test('xml: 翻訳文の埋め込み (エスケープ・タグの中は触らな�
   assert.equal(encodeAndroid('a\nb'), 'a\\nb')
   assert.equal(encodeAndroid('<a href="x">link</a> &amp; 1 < 2'), '<a href="x">link</a> &amp; 1 &lt; 2')
 })
+
+import { getLanguage } from '../src/shared/languages.ts'
+import { outputPath } from '../src/shared/outname.ts'
+
+test('xml: 出力パス (values-ja/strings.xml)', () => {
+  const L = (c: string) => getLanguage(c) as NonNullable<ReturnType<typeof getLanguage>>
+  assert.equal(outputPath('strings.xml', L('ja'), 'full', 'xml'), 'values-ja/strings.xml')
+  assert.equal(outputPath('strings.xml', L('zh-CN'), 'full', 'xml'), 'values-zh-rCN/strings.xml')
+  assert.equal(outputPath('strings.xml', L('pt-BR'), 'short', 'xml'), 'values-pt-rBR/strings.xml')
+  assert.equal(outputPath('en_US.json', L('ja'), 'full', 'json'), 'ja_JP.json')
+  assert.equal(outputPath('app_en.csv', L('ja'), 'full', 'csv-nh'), 'app_ja.csv')
+})

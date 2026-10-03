@@ -5,14 +5,13 @@ import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
 import type { LangPicker } from './langpicker'
 import { getLanguage } from '@shared/languages'
-import { outputName } from '@shared/outname'
+import { outputPath } from '@shared/outname'
 import { initResults } from './results'
 import { isIgnoredId, pathId, type KeyEntry, type Marks } from '@shared/keyscan'
 import type { Untranslated } from '@shared/untranslated'
 import {
   csvColumnNames,
   detectFormat,
-  extFor,
   findUntranslatedFor,
   isCsv,
   keyEntries,
@@ -115,7 +114,7 @@ $('btn-pick').addEventListener('click', async () => {
     const l = code ? getLanguage(code) : undefined
     if (!l) return currentName || 'output.json'
     const style = (await window.api.getSettings()).fileNameStyle
-    return outputName(currentName, l, style, extFor(lastCtx?.format ?? 'json'))
+    return outputPath(currentName, l, style, lastCtx?.format ?? 'json')
   }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()
