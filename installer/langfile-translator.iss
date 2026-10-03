@@ -1,9 +1,9 @@
-; Inno Setup script (ASCII only). Build: ISCC.exe /DAppVersion=x.y.z installer\json-translator.iss
+; Inno Setup script (ASCII only). Build: ISCC.exe /DAppVersion=x.y.z installer\langfile-translator.iss
 #ifndef AppVersion
   #define AppVersion "0.0.0"
 #endif
-#define AppName "json-translator"
-#define AppExe "json-translator.exe"
+#define AppName "LangFile-Translator"
+#define AppExe "LangFile-Translator.exe"
 #define AppSrc "..\release\win-unpacked"
 #define AppOut "..\release"
 
@@ -12,7 +12,7 @@ AppId={{8C4B6D2E-5A3F-4E87-9B1A-2D7F0C6E9A41}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppPublisher=29kiyo
-AppPublisherURL=https://github.com/29kiyo/json-translator
+AppPublisherURL=https://github.com/29kiyo/LangFile-Translator
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes

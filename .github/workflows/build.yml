@@ -83,9 +83,9 @@ jobs:
           $v = node -p "require('./package.json').version"
           $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { choco install innosetup -y --no-progress }
-          & $iscc "/DAppVersion=$v" installer\json-translator.iss
+          & $iscc "/DAppVersion=$v" installer\langfile-translator.iss
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed ($LASTEXITCODE)" }
-          $name = "json-translator-$v-win"
+          $name = "LangFile-Translator-$v-win"
           Rename-Item release\win-unpacked $name
           Compress-Archive -Path "release\$name" -DestinationPath "release\$name.zip"
 

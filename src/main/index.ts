@@ -16,11 +16,16 @@ import {
 import { translateJson } from './translate/engine'
 import { isLocaleCode } from '@shared/locale-file'
 import { makeZip } from './zip'
+import { migrateUserData } from './migrate'
 import iconIco from '../../build/icon.ico?asset'
 import iconPng from '../../build/icon.png?asset'
 
 const appIcon = process.platform === 'win32' ? iconIco : iconPng
-const settingsPath = join(app.getPath('userData'), 'settings.json')
+// 保存先を固定する (dev と配布版で同じ場所)。旧名 json-translator の設定は、初回だけコピーする
+const userDataDir = join(app.getPath('appData'), 'LangFile-Translator')
+app.setPath('userData', userDataDir)
+const migrated = migrateUserData(join(app.getPath('appData'), 'json-translator'), userDataDir)
+const settingsPath = join(userDataDir, 'settings.json')
 let win: BrowserWindow | null = null
 
 /** 実行した処理をコンソールとUIログに流す (表示のon/offはUI側の設定) */
@@ -228,7 +233,7 @@ function createWindow(): void {
   win.on('closed', () => {
     win = null
   })
-  win.webContents.once('did-finish-load', () => logCommand(`app started (settings: ${settingsPath})`))
+  win.webContents.once('did-finish-load', () => logCommand(`app started (settings: ${settingsPath})${migrated ? " (copied from json-translator)" : ""}`))
   if (process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -238,7 +243,7 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   // タスクバーのグループ化・ピン留め用 (配布版の appId と同じ値にする)
-  app.setAppUserModelId('com.github.29kiyo.json-translator')
+  app.setAppUserModelId('com.github.29kiyo.langfile-translator')
   ipcMain.handle(IPC.getSettings, () => settings)
   ipcMain.handle(IPC.setSettings, (_e, patch: Partial<Settings>) => {
     settings = { ...settings, ...patch }

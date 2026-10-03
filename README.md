@@ -1,4 +1,4 @@
-# json-translator
+# LangFile-Translator
 
 JSON などの言語ファイルを、翻訳 API やローカル LLM で自動翻訳する、Windows 用のデスクトップアプリです。Electron + TypeScript 製。
 
@@ -57,19 +57,19 @@ Each file format (ARB / INI / .properties and .lang / CSV and TSV / YAML / PO an
 
 ## ダウンロード / Download
 
-[Releases ページ](https://github.com/29kiyo/json-translator/releases) から、次のいずれかを取得できます。
+[Releases ページ](https://github.com/29kiyo/LangFile-Translator/releases) から、次のいずれかを取得できます。
 
 | 種類 / Type | ファイル / File | 使い方 / How to use |
 |---|---|---|
-| インストーラー / Installer | `json-translator-<version>-setup.exe` | 実行してインストール (管理者権限は不要) / Run it to install (no administrator rights needed) |
-| zip | `json-translator-<version>-win.zip` | 展開して `json-translator.exe` を実行 / Extract and run `json-translator.exe` |
-| ポータブル / Portable | `json-translator-<version>-portable.exe` | そのまま実行 (インストール不要) / Run it as is (no installation) |
+| インストーラー / Installer | `LangFile-Translator-<version>-setup.exe` | 実行してインストール (管理者権限は不要) / Run it to install (no administrator rights needed) |
+| zip | `LangFile-Translator-<version>-win.zip` | 展開して `LangFile-Translator.exe` を実行 / Extract and run `LangFile-Translator.exe` |
+| ポータブル / Portable | `LangFile-Translator-<version>-portable.exe` | そのまま実行 (インストール不要) / Run it as is (no installation) |
 
 署名していないため、初回の起動時に Windows SmartScreen の警告が出ることがあります。「詳細情報」→「実行」で起動できます。
 
 The files are not code-signed, so Windows SmartScreen may show a warning the first time. Click "More info", then "Run anyway".
 
-You can get any of the files above from the [Releases page](https://github.com/29kiyo/json-translator/releases).
+You can get any of the files above from the [Releases page](https://github.com/29kiyo/LangFile-Translator/releases).
 
 ## 使い方 / Usage
 
@@ -113,8 +113,8 @@ English: you can add UI languages as JSON files from "Settings" → "Add UI lang
 
 ## 注意 / Notes
 
-- 設定は `%APPDATA%\json-translator\settings.json` に保存されます。API キーは平文で保存されます。
-- Settings are saved in `%APPDATA%\json-translator\settings.json`. API keys are stored in plain text.
+- 設定は `%APPDATA%\LangFile-Translator\settings.json` に保存されます。API キーは平文で保存されます。
+- Settings are saved in `%APPDATA%\LangFile-Translator\settings.json`. API keys are stored in plain text.
 - ファイル形式ごとの制限: YAML の `|` `>` の複数行・アンカー・タグ付きの値、CSV の複数行のセル、PO の値が入っている `msgstr`、`translatable="false"` の Android の項目は翻訳せずそのまま残す。`strings.xml` 以外の `.xml` と TOML には対応しない。PO の複数形は、ファイルにある `msgstr[n]` だけを埋める (`Plural-Forms` は変えない)。CSV は UTF-8 のみ。
 - 言語コードのような値 (INI の `lang=en` など) も翻訳対象になる。外したいときは、無視キーに入れるか、行番号横の赤い点で外す。
 - Format limits: YAML block scalars (`|` `>`), anchored or tagged values, multi-line CSV cells, PO entries whose `msgstr` is already filled, and Android items with `translatable="false"` are left as they are. `.xml` files other than `strings.xml`, and TOML, are not supported. For PO plurals, only the `msgstr[n]` entries present in the file are filled (`Plural-Forms` is not changed). CSV must be UTF-8.
@@ -150,6 +150,7 @@ Builds and releases are done with GitHub Actions (`.github/workflows/build.yml`)
 - 出力ファイル名を、元の名前の言語コードに合わせて決める方式に変更 (`en_US` → `ja_JP`、`en` → `ja`)。「出力ファイル名の形式」の設定は廃止
 - 言語を追加: 中国語 (香港)、英語 (イギリス)、スペイン語 (メキシコ)、フランス語 (カナダ)、セルビア語 (ラテン文字)、ノルウェー語 (ブークモール / ニーノシュク)、フィリピン語、広東語
 - 汎用の XML と TOML には対応しません
+- 名前を LangFile-Translator に変更。設定の保存先は `%APPDATA%\LangFile-Translator` になり、初回起動時に旧 `json-translator` の設定 (プロバイダー・言語ファイル) を自動でコピーする
 
 English:
 
@@ -158,6 +159,7 @@ English:
 - Output file names now follow the language code in the source name (`en_US` → `ja_JP`, `en` → `ja`). The "Output file name" setting was removed
 - Added languages: Chinese (Hong Kong), English (UK), Spanish (Mexico), French (Canada), Serbian (Latin), Norwegian (Bokmål / Nynorsk), Filipino, Cantonese
 - Generic XML and TOML are not supported
+- Renamed to LangFile-Translator. Settings are now stored in `%APPDATA%\LangFile-Translator`, and the old `json-translator` settings (providers, language files) are copied automatically on first launch
 
 ### v1.0.0
 

@@ -1,7 +1,7 @@
 {
-  "name": "json-translator",
+  "name": "langfile-translator",
   "version": "0.0.0",
-  "description": "JSON translator GUI",
+  "description": "Language file translator GUI",
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
@@ -27,9 +27,9 @@
     "yaml": "^2.9.1"
   },
   "author": "29kiyo",
-  "homepage": "https://github.com/29kiyo/json-translator",
+  "homepage": "https://github.com/29kiyo/LangFile-Translator",
   "repository": {
     "type": "git",
-    "url": "https://github.com/29kiyo/json-translator.git"
+    "url": "https://github.com/29kiyo/LangFile-Translator.git"
   }
 }

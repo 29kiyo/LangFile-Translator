@@ -1,5 +1,5 @@
-appId: com.github.29kiyo.json-translator
-productName: json-translator
+appId: com.github.29kiyo.langfile-translator
+productName: LangFile-Translator
 copyright: Copyright (c) 29kiyo
 directories:
   buildResources: build
