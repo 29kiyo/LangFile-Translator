@@ -1,5 +1,3 @@
-import type { NameStyle } from './types'
-
 export interface Language {
   /** 翻訳APIに渡すコード (例: ja, zh-CN) */
   code: string
@@ -19,6 +17,7 @@ ms:MY mt:MT my:MM ne:NP nl:NL no:NO nso:ZA ny:MW oc:FR om:ET or:IN pa:IN pl:PL p
 pt-BR pt-PT qu:PE rm:CH ro:RO ru:RU rw:RW sa:IN sd:PK si:LK sk:SK sl:SI sm:WS sn:ZW
 so:SO sq:AL sr:RS st:LS su:ID sv:SE sw:KE ta:IN te:IN tg:TJ th:TH ti:ET tk:TM tl:PH
 tr:TR ts:ZA tt:RU ug:CN uk:UA ur:PK uz:UZ vi:VN wa:BE xh:ZA yi yo:NG zh-CN zh-TW zu:ZA
+zh-HK en-GB es-MX fr-CA sr-Latn nb:NO nn:NO fil:PH yue:HK
 `
 
 export const LANGUAGES: Language[] = RAW.trim()
@@ -32,13 +31,13 @@ export function getLanguage(code: string): Language | undefined {
   return LANGUAGES.find((l) => l.code === code)
 }
 
-/** full: ja_jp / short: ja。zh-CN 等は常に zh_cn */
-export function fileBaseName(l: Language, style: NameStyle): string {
+/** ja_jp の形 (地域のない言語は ja)。zh-CN 等は常に zh_cn */
+export function fileBaseName(l: Language): string {
   if (l.code.includes('-')) return l.code.replace('-', '_').toLowerCase()
-  if (style === 'short' || !l.region) return l.code
+  if (!l.region) return l.code
   return `${l.code}_${l.region.toLowerCase()}`
 }
 
-export function fileNameFor(l: Language, style: NameStyle): string {
-  return `${fileBaseName(l, style)}.json`
+export function fileNameFor(l: Language): string {
+  return `${fileBaseName(l)}.json`
 }

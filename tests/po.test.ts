@@ -63,6 +63,6 @@ test('po: 未翻訳の判定・拡張子・出力名', () => {
   assert.equal(detectFormat('app.POT', ''), 'po')
   assert.equal(detectFormat('en.po', ''), 'po')
   const ja = getLanguage('ja') as NonNullable<ReturnType<typeof getLanguage>>
-  assert.equal(outputName('app.pot', ja, 'full', 'po'), 'ja_jp.po')
-  assert.equal(outputName('en_US.po', ja, 'full', 'po'), 'ja_JP.po')
+  assert.equal(outputName('app.pot', ja, 'po'), 'ja_jp.po')
+  assert.equal(outputName('en_US.po', ja, 'po'), 'ja_JP.po')
 })

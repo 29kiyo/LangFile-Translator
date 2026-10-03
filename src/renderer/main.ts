@@ -104,11 +104,8 @@ async function init(): Promise<void> {
   lang.addEventListener('change', () => update({ uiLanguage: lang.value }))
   showLog.addEventListener('change', () => update({ showCommandLog: showLog.checked }))
 
-  const nameStyle = $<HTMLSelectElement>('set-namestyle')
   const bulk = $<HTMLSelectElement>('set-bulk')
-  nameStyle.value = settings.fileNameStyle
   bulk.value = settings.bulkMethod
-  nameStyle.addEventListener('change', () => update({ fileNameStyle: nameStyle.value as Settings['fileNameStyle'] }))
   bulk.addEventListener('change', () => update({ bulkMethod: bulk.value as Settings['bulkMethod'] }))
   const delImp = $<HTMLSelectElement>('uil-delete')
   delImp.value = settings.deleteImported

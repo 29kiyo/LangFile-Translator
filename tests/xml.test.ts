@@ -51,9 +51,11 @@ import { outputPath } from '../src/shared/outname.ts'
 
 test('xml: 出力パス (values-ja/strings.xml)', () => {
   const L = (c: string) => getLanguage(c) as NonNullable<ReturnType<typeof getLanguage>>
-  assert.equal(outputPath('strings.xml', L('ja'), 'full', 'xml'), 'values-ja/strings.xml')
-  assert.equal(outputPath('strings.xml', L('zh-CN'), 'full', 'xml'), 'values-zh-rCN/strings.xml')
-  assert.equal(outputPath('strings.xml', L('pt-BR'), 'short', 'xml'), 'values-pt-rBR/strings.xml')
-  assert.equal(outputPath('en_US.json', L('ja'), 'full', 'json'), 'ja_JP.json')
-  assert.equal(outputPath('app_en.csv', L('ja'), 'full', 'csv-nh'), 'app_ja.csv')
+  assert.equal(outputPath('strings.xml', L('ja'), 'xml'), 'values-ja/strings.xml')
+  assert.equal(outputPath('strings.xml', L('zh-CN'), 'xml'), 'values-zh-rCN/strings.xml')
+  assert.equal(outputPath('strings.xml', L('pt-BR'), 'xml'), 'values-pt-rBR/strings.xml')
+  assert.equal(outputPath('strings.xml', L('zh-HK'), 'xml'), 'values-zh-rHK/strings.xml')
+  assert.equal(outputPath('strings.xml', L('sr-Latn'), 'xml'), 'values-b+sr+Latn/strings.xml')
+  assert.equal(outputPath('en_US.json', L('ja'), 'json'), 'ja_JP.json')
+  assert.equal(outputPath('app_en.csv', L('ja'), 'csv-nh'), 'app_ja.csv')
 })

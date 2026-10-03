@@ -111,7 +111,6 @@
   "res.save": "Save edits",
   "res.applied": "Saved (used for downloads)",
   "res.unsaved": "unsaved edits are not included",
-  "settings.nameStyle": "Output file name",
   "settings.bulkMethod": "Bulk download",
   "settings.bulk.folder": "Files into the output folder"
 }

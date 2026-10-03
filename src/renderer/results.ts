@@ -344,7 +344,6 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   // --- 複数言語の翻訳 (選択した言語を順に翻訳) ---
   const start = async (codes: string[]): Promise<void> => {
     const src = deps.getSource()
-    const s = await window.api.getSettings()
     const opt = deps.getOptions()
     ctx = {
       source: src,
@@ -356,7 +355,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const next: Result[] = []
     for (const code of codes) {
       const l = getLanguage(code)
-      if (l) next.push({ code, file: outputPath(deps.getSourceName(), l, s.fileNameStyle, opt.format), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
+      if (l) next.push({ code, file: outputPath(deps.getSourceName(), l, opt.format), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
     }
     results = next
     openIdx = -1

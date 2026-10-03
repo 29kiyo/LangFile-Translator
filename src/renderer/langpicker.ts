@@ -4,7 +4,7 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 const uiLocale = (): string => document.documentElement.lang || 'en'
 
 /** 中国語は地域ではなく文字体系で表示する */
-const LABEL: Record<string, string> = { 'zh-CN': '中文（簡体字）', 'zh-TW': '中文（繁体字）' }
+const LABEL: Record<string, string> = { 'zh-CN': '中文（簡体字）', 'zh-TW': '中文（繁体字）', 'zh-HK': '中文（繁体字・香港）' }
 
 function nameMap(locale: string): Map<string, string> {
   const m = new Map<string, string>()
@@ -91,7 +91,7 @@ export function initLangPicker(t: (key: string) => string): LangPicker {
     const hit = LANGUAGES.filter(
       (l) =>
         !q ||
-        [l.code, fileBaseName(l, 'full'), nativeName(l.code), en.get(l.code) ?? '', ui.get(l.code) ?? ''].some((s) =>
+        [l.code, fileBaseName(l), nativeName(l.code), en.get(l.code) ?? '', ui.get(l.code) ?? ''].some((s) =>
           norm(s).includes(q)
         )
     )

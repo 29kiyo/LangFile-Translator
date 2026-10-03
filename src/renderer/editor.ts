@@ -113,8 +113,7 @@ $('btn-pick').addEventListener('click', async () => {
     const code = lastCtx?.to ?? picker.selected()[0]
     const l = code ? getLanguage(code) : undefined
     if (!l) return currentName || 'output.json'
-    const style = (await window.api.getSettings()).fileNameStyle
-    return outputPath(currentName, l, style, lastCtx?.format ?? 'json')
+    return outputPath(currentName, l, lastCtx?.format ?? 'json')
   }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()

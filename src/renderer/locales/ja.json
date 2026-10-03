@@ -111,7 +111,6 @@
   "res.save": "編集を保存",
   "res.applied": "保存しました (ダウンロードに反映されます)",
   "res.unsaved": "未保存の編集は含まれません",
-  "settings.nameStyle": "出力ファイル名の形式",
   "settings.bulkMethod": "一括ダウンロード方式",
   "settings.bulk.folder": "出力先フォルダに個別保存"
 }

@@ -1,6 +1,5 @@
 import type { Language } from './languages.ts'
 import { LANGUAGES, fileBaseName } from './languages.ts'
-import type { NameStyle } from './types.ts'
 import type { FormatId } from './formats/types.ts'
 import { extFor } from './formats/index.ts'
 
@@ -43,23 +42,25 @@ function findCode(base: string): Found | null {
 /**
  * 翻訳結果の出力ファイル名。
  * 元の名前に言語コードがあれば、その形式 (en_US → ja_JP、en → ja、大文字小文字・区切り文字も元に合わせる) で翻訳先に置き換える。
- * 無ければ、設定の形式 (ja_jp / ja) を使う。拡張子は元のまま (無ければ defaultExt)
+ * 無ければ ja_jp の形にする。拡張子は元のまま (無ければ defaultExt)
  */
-export function outputName(srcName: string, l: Language, style: NameStyle, defaultExt = 'json'): string {
+export function outputName(srcName: string, l: Language, defaultExt = 'json'): string {
   const dot = srcName.lastIndexOf('.')
   const hasExt = dot > 0 && dot < srcName.length - 1
   const base = hasExt ? srcName.slice(0, dot) : srcName
   const ext = (hasExt ? srcName.slice(dot) : `.${defaultExt}`).replace(/\.pot$/i, '.po')
 
   const f = findCode(base)
-  if (!f) return `${fileBaseName(l, style)}${ext}`
+  if (!f) return `${fileBaseName(l)}${ext}`
 
   const [lang, codeRegion = ''] = l.code.split('-')
   // 地域付きコード (zh-CN) は常に地域付き。それ以外は、元に地域があるときだけ付ける
   const outRegion = codeRegion || (f.region ? l.region : '')
   let name = lang
   if (outRegion) {
-    const r = f.region && f.region === f.region.toUpperCase() ? outRegion.toUpperCase() : outRegion.toLowerCase()
+    const upper = !!f.region && f.region === f.region.toUpperCase()
+    // スクリプト (sr-Latn の Latn) は先頭だけ大文字のまま、地域 (JP) は元に合わせる
+    const r = outRegion.length === 4 ? (upper ? outRegion : outRegion.toLowerCase()) : upper ? outRegion.toUpperCase() : outRegion.toLowerCase()
     name += (f.regionSep || '_') + r
   }
   return base.slice(0, f.start) + name + base.slice(f.end) + ext
@@ -68,11 +69,12 @@ export function outputName(srcName: string, l: Language, style: NameStyle, defau
 /** Android のリソースフォルダ名 (ja → values-ja、zh-CN → values-zh-rCN) */
 export function androidDir(l: Language): string {
   const [lang, region] = l.code.split('-')
+  if (region && region.length === 4) return `values-b+${lang}+${region}`
   return `values-${lang}${region ? `-r${region.toUpperCase()}` : ''}`
 }
 
 /** 保存する相対パス。Android は values-ja/strings.xml、それ以外は outputName */
-export function outputPath(srcName: string, l: Language, style: NameStyle, format: FormatId): string {
+export function outputPath(srcName: string, l: Language, format: FormatId): string {
   if (format === 'xml') return `${androidDir(l)}/strings.xml`
-  return outputName(srcName, l, style, extFor(format))
+  return outputName(srcName, l, extFor(format))
 }

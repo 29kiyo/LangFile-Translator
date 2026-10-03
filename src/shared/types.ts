@@ -63,7 +63,6 @@ export interface TranslateProgress {
   total: number
 }
 
-export type NameStyle = 'full' | 'short'
 export type BulkMethod = 'zip' | 'folder'
 
 export interface BulkFile {
@@ -111,8 +110,6 @@ export interface Settings {
   distribution: DistributionSettings
   translateMode: TranslateMode
   ignoreKeys: string
-  /** ja_jp.json (full) / ja.json (short) */
-  fileNameStyle: NameStyle
   bulkMethod: BulkMethod
   /** 表示言語ファイルの追加後、元のファイルを削除するか */
   deleteImported: DeleteImported
@@ -129,7 +126,6 @@ export const DEFAULT_SETTINGS: Settings = {
   distribution: { enabled: false },
   translateMode: 'structure',
   ignoreKeys: '',
-  fileNameStyle: 'full',
   bulkMethod: 'zip',
   deleteImported: 'ask',
   targetLangs: ['ja']
