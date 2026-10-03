@@ -4,12 +4,16 @@ import type { Adapter } from './adapters.ts'
 import { BadFormatError, createAdapter } from './adapters.ts'
 import type { Mode } from '../../shared/translate-core.ts'
 import { extract, makeBatches, parseIgnoreKeys, protect, restore } from '../../shared/translate-core.ts'
+import type { FormatId } from '../../shared/formats/types.ts'
+import { effectiveIgnore, finalize, planSegments, supportsKeyMode } from '../../shared/formats/index.ts'
 
 export interface EngineOptions {
   providers: Provider[]
   distribution: boolean
   mode: Mode
   ignoreKeys: string
+  /** 元ファイルの形式 (省略時は json) */
+  format?: FormatId
   /** 行マーカーによる個別の無視 / 解除 (出現位置単位) */
   marks?: Marks
   from: string
@@ -44,10 +48,12 @@ async function translateSplit(a: Adapter, texts: string[], o: EngineOptions): Pr
 }
 
 export async function translateJson(text: string, o: EngineOptions): Promise<EngineResult> {
-  const clean = text.replace(/^\uFEFF/, '')
-  let json: unknown
+  const format = o.format ?? 'json'
+  const isJson = format === 'json' || format === 'arb'
+  const clean = isJson ? text.replace(/^\uFEFF/, '') : text
+  let json: unknown = null
   try {
-    json = JSON.parse(clean)
+    if (isJson) json = JSON.parse(clean)
   } catch (e) {
     throw new Error(`JSON parse error: ${(e as Error).message}`)
   }
@@ -59,7 +65,9 @@ export async function translateJson(text: string, o: EngineOptions): Promise<Eng
   const maxItems = Math.min(...[...adapters.values()].map((a) => a.maxItems))
   const maxChars = Math.min(...[...adapters.values()].map((a) => a.maxChars))
 
-  const ex = extract(json, o.mode, parseIgnoreKeys(o.ignoreKeys), o.marks)
+  const ignore = effectiveIgnore(format, clean, parseIgnoreKeys(o.ignoreKeys))
+  const plan = planSegments(format, clean, ignore, o.marks)
+  const ex = plan ?? extract(json, supportsKeyMode(format) ? o.mode : 'structure', ignore, o.marks)
   const prot = ex.texts.map(protect)
   const batches = makeBatches(
     prot.map((x) => x.text),
@@ -136,6 +144,9 @@ export async function translateJson(text: string, o: EngineOptions): Promise<Eng
   })
 
   const indent = clean.match(/^[ \t]+(?=\S)/m)?.[0] ?? 2
-  const outText = JSON.stringify(ex.build(map), null, indent) + (/\n$/.test(clean) ? '\n' : '')
+  const built = plan
+    ? plan.build(map)
+    : JSON.stringify(ex.build(map), null, indent) + (/\n$/.test(clean) ? '\n' : '')
+  const outText = finalize(format, built, o.to)
   return { text: outText, warnings, used: [...used] }
 }

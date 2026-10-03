@@ -1,3 +1,4 @@
+import type { FormatId } from './formats/types.ts'
 export type Theme = 'light' | 'dark'
 
 export type ProviderType =
@@ -45,6 +46,8 @@ export interface TranslateRequest {
   ignoreKeys: string
   from: string
   to: string
+  /** 元ファイルの形式 (省略時は JSON) */
+  format?: FormatId
 }
 
 export interface TranslateResult {

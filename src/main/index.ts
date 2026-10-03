@@ -145,6 +145,7 @@ async function runTranslate(req: TranslateRequest): Promise<TranslateResult> {
       distribution: dist,
       mode: req.mode,
       ignoreKeys: req.ignoreKeys,
+      format: req.format,
       marks: req.marks && { marked: new Set(req.marks.marked), released: new Set(req.marks.released) },
       from: req.from,
       to: req.to,
@@ -239,7 +240,7 @@ app.whenReady().then(() => {
     const r = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'JSON / Text', extensions: ['json', 'txt', 'lang', 'properties'] },
+        { name: 'JSON / Text', extensions: ['json', 'arb', 'ini', 'properties', 'lang', 'txt'] },
         { name: 'All', extensions: ['*'] }
       ]
     })
