@@ -75,6 +75,7 @@
   "err.noProvider": "No enabled provider. Enable at least one in the Providers tab",
   "err.busy": "Another translation is running",
   "err.jsonParse": "Not valid JSON",
+  "err.unsupported": "Unsupported file format ({ext})",
   "settings.section.display": "Display",
   "settings.section.output": "Output",
   "settings.section.other": "Other",

@@ -1,10 +1,12 @@
 import type { Untranslated } from '@shared/untranslated'
+import type { FormatId } from '@shared/formats/types'
+import { encodeFor } from '@shared/formats/index'
 
 export interface RetryEdit {
   line: number
   startCol: number
   endCol: number
-  /** 差し替える文字列 (クォート付きのJSON文字列) */
+  /** 差し替える文字列 (形式に合わせたもの。JSON / ARB はクォート付き) */
   text: string
 }
 
@@ -16,7 +18,8 @@ export interface RetryEdit {
 export async function retranslate(
   items: Untranslated[],
   to: string,
-  currentList: () => Untranslated[]
+  currentList: () => Untranslated[],
+  format: FormatId = 'json'
 ): Promise<{ ok: boolean; message: string; edits: RetryEdit[] }> {
   const sources = [...new Set(items.map((u) => u.source))]
   const r = await window.api.translate({
@@ -43,7 +46,7 @@ export async function retranslate(
     if (!wanted.has(u.idx)) continue
     const tr = map.get(u.source)
     if (tr === undefined || tr === u.source) continue
-    edits.push({ line: u.line, startCol: u.startCol, endCol: u.endCol, text: JSON.stringify(tr) })
+    edits.push({ line: u.line, startCol: u.startCol, endCol: u.endCol, text: encodeFor(format)(tr) })
   }
   return { ok: true, message: '', edits }
 }
