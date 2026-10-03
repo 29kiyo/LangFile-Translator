@@ -47,7 +47,7 @@ export function outputName(srcName: string, l: Language, style: NameStyle, defau
   const dot = srcName.lastIndexOf('.')
   const hasExt = dot > 0 && dot < srcName.length - 1
   const base = hasExt ? srcName.slice(0, dot) : srcName
-  const ext = hasExt ? srcName.slice(dot) : `.${defaultExt}`
+  const ext = (hasExt ? srcName.slice(dot) : `.${defaultExt}`).replace(/\.pot$/i, '.po')
 
   const f = findCode(base)
   if (!f) return `${fileBaseName(l, style)}${ext}`

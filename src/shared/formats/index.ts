@@ -9,6 +9,7 @@ import type { Entry, FormatId, SegmentFormat } from './types.ts'
 import { INI, LANG, PROPERTIES } from './line.ts'
 import { CSV, CSV_NH, TSV, TSV_NH, csvColumns, detectDelim } from './csv.ts'
 import { YAML } from './yaml.ts'
+import { PO, finalizePo } from './po.ts'
 
 export type { Entry, FormatId, SegmentFormat }
 
@@ -20,7 +21,8 @@ const SEGMENT: Partial<Record<FormatId, SegmentFormat>> = {
   tsv: TSV,
   'csv-nh': CSV_NH,
   'tsv-nh': TSV_NH,
-  yaml: YAML
+  yaml: YAML,
+  po: PO
 }
 const EXT: Record<string, FormatId> = {
   json: 'json',
@@ -31,7 +33,9 @@ const EXT: Record<string, FormatId> = {
   csv: 'csv',
   tsv: 'tsv',
   yaml: 'yaml',
-  yml: 'yaml'
+  yml: 'yaml',
+  po: 'po',
+  pot: 'po'
 }
 
 /** 拡張子が無いとき (直接入力) は内容から推定する */
@@ -109,6 +113,7 @@ export function encodeFor(format: FormatId): (s: string) => string {
 
 /** 翻訳後の仕上げ。ARB は @@locale を翻訳先のコードにする */
 export function finalize(format: FormatId, text: string, to: string): string {
+  if (format === 'po') return finalizePo(text, to)
   if (format !== 'arb') return text
   const t = scanStrings(text)
   const i = t.findIndex((x) => x.kind === 'key' && x.text === '@@locale' && x.path.length === 1)

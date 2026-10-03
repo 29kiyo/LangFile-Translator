@@ -240,7 +240,7 @@ app.whenReady().then(() => {
     const r = await dialog.showOpenDialog({
       properties: ['openFile', 'multiSelections'],
       filters: [
-        { name: 'JSON / Text', extensions: ['json', 'arb', 'ini', 'properties', 'lang', 'csv', 'tsv', 'yaml', 'yml', 'txt'] },
+        { name: 'JSON / Text', extensions: ['json', 'arb', 'ini', 'properties', 'lang', 'csv', 'tsv', 'yaml', 'yml', 'po', 'pot', 'txt'] },
         { name: 'All', extensions: ['*'] }
       ]
     })
