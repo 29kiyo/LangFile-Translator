@@ -1,6 +1,6 @@
 import type { KeyPath } from '../keyscan.ts'
 
-export type FormatId = 'json' | 'arb' | 'ini' | 'properties' | 'lang' | 'csv' | 'tsv' | 'csv-nh' | 'tsv-nh' | 'yaml' | 'po'
+export type FormatId = 'json' | 'arb' | 'ini' | 'properties' | 'lang' | 'csv' | 'tsv' | 'csv-nh' | 'tsv-nh' | 'yaml' | 'po' | 'xml'
 
 /** 1つの値 (翻訳対象の候補)。位置は Monaco と同じ列 (1始まり、endCol は含まない) */
 export interface Entry {
