@@ -1,9 +1,11 @@
 import * as monaco from 'monaco-editor/editor/editor.api.js'
-import { fileNameFor, getLanguage } from '@shared/languages'
+import { getLanguage } from '@shared/languages'
+import { outputName } from '@shared/outname'
 import type { BulkFile } from '@shared/types'
 import { nativeName } from './langpicker'
 import type { Marks } from '@shared/keyscan'
-import { findUntranslated, parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
+import { parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
+import { findUntranslatedFor, type FormatId } from '@shared/formats/index'
 import { renderUntranslated, uniqueLines } from './unview'
 import { applyReplacements } from '@shared/textedit'
 import { retranslate } from './retry'
@@ -30,7 +32,12 @@ interface Result {
 export interface ResultsDeps {
   getSource(): string
   getSourceName(): string
-  getOptions(): { mode: 'structure' | 'keys'; ignoreKeys: string; marks?: { marked: string[]; released: string[] } }
+  getOptions(): {
+    mode: 'structure' | 'keys'
+    ignoreKeys: string
+    marks?: { marked: string[]; released: string[] }
+    format: FormatId
+  }
 }
 
 export interface ResultsApi {
@@ -63,7 +70,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
 
   let results: Result[] = []
   /** 直近の翻訳の条件 (原文・モード・無視)。未翻訳の判定に使う */
-  let ctx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks?: Marks } | null = null
+  let ctx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks?: Marks; format: FormatId } | null = null
   let openIdx = -1
   let openName: HTMLElement | null = null
   let cancelFlag = false
@@ -89,7 +96,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
   const rowName = (r: Result): string => `${r.file}${r.draft !== undefined ? ' ●' : ''}`
 
   const calcUn = (text: string, r: Result): Untranslated[] =>
-    ctx ? findUntranslated(ctx.source, text, ctx.mode, ctx.ignore, ctx.marks, r.dismissed) : []
+    ctx ? findUntranslatedFor(ctx.format, ctx.source, text, ctx.mode, ctx.ignore, ctx.marks, r.dismissed) : []
   const unBadge = (r: Result): string =>
     r.status === 'done' && r.unt.length ? t('un.badge').replace('{n}', String(uniqueLines(r.unt))) : ''
   const jump = (u: Untranslated): void => {
@@ -142,7 +149,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     status.textContent = t('un.retrying')
     const openNow = (): boolean => results[openIdx] === r && ed !== null
     const cur = (): string => (openNow() && ed ? ed.getValue() : (r.draft ?? r.text))
-    const out = await retranslate(items, r.code, () => calcUn(cur(), r))
+    const out = await retranslate(items, r.code, () => calcUn(cur(), r), ctx?.format)
     btnTr.disabled = false
     if (!out.ok) {
       status.textContent = `${t('tr.failed')}: ${errText(out.message, t)}`
@@ -341,6 +348,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const opt = deps.getOptions()
     ctx = {
       source: src,
+      format: opt.format,
       mode: opt.mode,
       ignore: parseIgnoreKeys(opt.ignoreKeys),
       marks: opt.marks && { marked: new Set(opt.marks.marked), released: new Set(opt.marks.released) }
@@ -348,7 +356,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const next: Result[] = []
     for (const code of codes) {
       const l = getLanguage(code)
-      if (l) next.push({ code, file: fileNameFor(l, s.fileNameStyle), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
+      if (l) next.push({ code, file: outputName(deps.getSourceName(), l, s.fileNameStyle, opt.format), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
     }
     results = next
     openIdx = -1
@@ -372,6 +380,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
         mode: opt.mode,
         ignoreKeys: opt.ignoreKeys,
         marks: opt.marks,
+        format: opt.format,
         from: 'auto',
         to: r.code
       })

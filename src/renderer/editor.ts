@@ -4,10 +4,12 @@ import 'monaco-editor/language/json/monaco.contribution.js'
 import editorWorker from 'monaco-editor/editor/editor.worker.js?worker'
 import jsonWorker from 'monaco-editor/language/json/json.worker.js?worker'
 import type { LangPicker } from './langpicker'
-import { fileNameFor, getLanguage } from '@shared/languages'
+import { getLanguage } from '@shared/languages'
+import { outputName } from '@shared/outname'
 import { initResults } from './results'
-import { isIgnoredId, scanKeys, type KeyEntry, type Marks } from '@shared/keyscan'
-import { findUntranslated, type Untranslated } from '@shared/untranslated'
+import { isIgnoredId, type KeyEntry, type Marks } from '@shared/keyscan'
+import type { Untranslated } from '@shared/untranslated'
+import { detectFormat, findUntranslatedFor, keyEntries, supportsKeyMode, type FormatId } from '@shared/formats/index'
 import { renderUntranslated } from './unview'
 import { retranslate } from './retry'
 import { errText } from './errtext'
@@ -38,6 +40,9 @@ export function initEditor(t: (key: string) => string, picker: LangPicker): void
   const right = monaco.editor.create($('editor-right'), { ...options, glyphMargin: true })
 
   let currentName = ''
+  const fmtOr = (): FormatId => detectFormat(currentName, left.getValue()) ?? 'json'
+  const unsupportedText = (): string =>
+    t('err.unsupported').replace('{ext}', /\.[^.\\/]+$/.exec(currentName)?.[0] ?? '')
 
 
   const status = $('file-name')
@@ -45,7 +50,7 @@ export function initEditor(t: (key: string) => string, picker: LangPicker): void
   const fileInput = $<HTMLInputElement>('file-input')
 
   const setLang = (name: string): void => {
-    const lang = name.toLowerCase().endsWith('.json') ? 'json' : 'plaintext'
+    const lang = /\.(json|arb)$/i.test(name) ? 'json' : 'plaintext'
     for (const ed of [left, right]) monaco.editor.setModelLanguage(ed.getModel()!, lang)
   }
 
@@ -60,6 +65,7 @@ export function initEditor(t: (key: string) => string, picker: LangPicker): void
     currentName = f.name
     setLang(f.name)
     status.textContent = f.name
+    trStatus.textContent = detectFormat(f.name, left.getValue()) === null ? unsupportedText() : ''
   }
 
 $('btn-pick').addEventListener('click', async () => {
@@ -97,7 +103,8 @@ $('btn-pick').addEventListener('click', async () => {
     const code = lastCtx?.to ?? picker.selected()[0]
     const l = code ? getLanguage(code) : undefined
     if (!l) return currentName || 'output.json'
-    return fileNameFor(l, (await window.api.getSettings()).fileNameStyle)
+    const style = (await window.api.getSettings()).fileNameStyle
+    return outputName(currentName, l, style, lastCtx?.format ?? 'json')
   }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()
@@ -138,6 +145,11 @@ $('btn-pick').addEventListener('click', async () => {
       trStatus.textContent = t('tr.noSource')
       return
     }
+    const fmt = detectFormat(currentName, src)
+    if (fmt === null) {
+      trStatus.textContent = unsupportedText()
+      return
+    }
     const codes = picker.selected()
     if (codes.length === 0) {
       trStatus.textContent = t('tr.selectLang')
@@ -155,6 +167,7 @@ $('btn-pick').addEventListener('click', async () => {
       mode: modeValue(),
       ignoreKeys: trIgnore.value,
       marks: marksPayload(),
+      format: fmt,
       from: 'auto',
       to: codes[0]
     })
@@ -166,6 +179,7 @@ $('btn-pick').addEventListener('click', async () => {
       lastCtx = {
         source: src,
         to: codes[0],
+        format: fmt,
         mode: modeValue(),
         ignore: keyList(),
         marks: { marked: new Set(marks.marked), released: new Set(marks.released) }
@@ -206,7 +220,7 @@ $('btn-pick').addEventListener('click', async () => {
   let lineEntries = new Map<number, KeyEntry>()
   const rescan = (): void => {
     const byLine = new Map<number, KeyEntry[]>()
-    for (const e of scanKeys(left.getValue())) {
+    for (const e of keyEntries(fmtOr(), left.getValue())) {
       const a = byLine.get(e.line)
       if (a) a.push(e)
       else byLine.set(e.line, [e])
@@ -244,6 +258,9 @@ $('btn-pick').addEventListener('click', async () => {
   const refreshFixed = (): void => {
     rescan()
     redraw()
+    // 「キーも翻訳」は JSON のみ
+    const keysOpt = trMode.querySelector('option[value="keys"]') as HTMLOptionElement | null
+    if (keysOpt) keysOpt.disabled = !supportsKeyMode(fmtOr())
   }
 
   const toggleLine = (line: number): void => {
@@ -287,7 +304,14 @@ $('btn-pick').addEventListener('click', async () => {
 
   // --- 未翻訳行の表示 (phase5) ---
   // 直近の翻訳の条件 (原文・モード・無視) を覚えておき、右エディタの内容と比べて「原文のまま残った行」を出す
-  let lastCtx: { source: string; mode: 'structure' | 'keys'; ignore: Set<string>; marks: Marks; to: string } | null = null
+  let lastCtx: {
+    source: string
+    mode: 'structure' | 'keys'
+    ignore: Set<string>
+    marks: Marks
+    to: string
+    format: FormatId
+  } | null = null
   const unBox = $('un-single')
   const jumpRight = (u: Untranslated): void => {
     right.revealLineInCenter(u.line)
@@ -304,16 +328,25 @@ $('btn-pick').addEventListener('click', async () => {
   let curList: Untranslated[] = []
   const computeUn = (): Untranslated[] =>
     lastCtx && picker.selected().length < 2
-      ? findUntranslated(lastCtx.source, right.getValue(), lastCtx.mode, lastCtx.ignore, lastCtx.marks, dismissed)
+      ? findUntranslatedFor(
+          lastCtx.format,
+          lastCtx.source,
+          right.getValue(),
+          lastCtx.mode,
+          lastCtx.ignore,
+          lastCtx.marks,
+          dismissed
+        )
       : []
 
   // 未翻訳の文字列だけを再翻訳して、右エディタに1回の編集として反映する (Ctrl+Z で戻せる)
   const retryItems = async (items: Untranslated[]): Promise<void> => {
     if (btnTr.disabled || !lastCtx || items.length === 0) return
     const to = lastCtx.to
+    const fmt = lastCtx.format
     btnTr.disabled = true
     trStatus.textContent = t('un.retrying')
-    const out = await retranslate(items, to, computeUn)
+    const out = await retranslate(items, to, computeUn, fmt)
     btnTr.disabled = false
     if (!out.ok) {
       trStatus.textContent = `${t('tr.failed')}: ${errText(out.message, t)}`
@@ -373,7 +406,7 @@ $('btn-pick').addEventListener('click', async () => {
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,
-    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value, marks: marksPayload() })
+    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value, marks: marksPayload(), format: fmtOr() })
   })
 
   // 結果一覧 (res) の初期化より後で、ピッカーの変更とモードを結び付ける
