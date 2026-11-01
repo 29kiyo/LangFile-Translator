@@ -1,4 +1,5 @@
 import type { FormatId } from './formats/types.ts'
+import type { MarksPayload } from './keyscan.ts'
 export type Theme = 'light' | 'dark'
 
 export type ProviderType =
@@ -37,10 +38,12 @@ export interface TestResult {
 }
 
 export type TranslateMode = 'structure' | 'keys'
+/** 無視キーのみ / 翻訳するキーのみ / 併用 */
+export type KeyMode = 'ignore' | 'only' | 'both'
 
 export interface TranslateRequest {
   /** 行マーカー: 個別に無視 (marked) / 無視キーの一覧から個別に外す (released) 出現位置のパス */
-  marks?: { marked: string[]; released: string[] }
+  marks?: MarksPayload
   text: string
   mode: TranslateMode
   ignoreKeys: string
@@ -110,6 +113,9 @@ export interface Settings {
   distribution: DistributionSettings
   translateMode: TranslateMode
   ignoreKeys: string
+  /** 翻訳するキー (カンマ区切り) */
+  onlyKeys: string
+  keyMode: KeyMode
   bulkMethod: BulkMethod
   /** 表示言語ファイルの追加後、元のファイルを削除するか */
   deleteImported: DeleteImported
@@ -126,6 +132,8 @@ export const DEFAULT_SETTINGS: Settings = {
   distribution: { enabled: false },
   translateMode: 'structure',
   ignoreKeys: '',
+  onlyKeys: '',
+  keyMode: 'ignore',
   bulkMethod: 'zip',
   deleteImported: 'ask',
   targetLangs: ['ja']

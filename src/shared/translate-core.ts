@@ -1,5 +1,5 @@
 import type { KeyPath, Marks } from './keyscan.ts'
-import { isIgnored } from './keyscan.ts'
+import { isActive, stateOf, verdict, type Own } from './keyscan.ts'
 
 export type Mode = 'structure' | 'keys'
 
@@ -31,19 +31,23 @@ function walk(
   ignore: Set<string>,
   fn: (s: string) => string,
   marks?: Marks,
-  path: KeyPath = []
+  path: KeyPath = [],
+  state: Own = undefined
 ): unknown {
-  if (typeof node === 'string') return fn(node)
-  if (Array.isArray(node)) return node.map((n, i) => walk(n, mode, ignore, fn, marks, marks ? [...path, i] : path))
+  if (typeof node === 'string') return isActive(state, marks) ? fn(node) : node
+  if (Array.isArray(node)) {
+    return node.map((n, i) => walk(n, mode, ignore, fn, marks, marks ? [...path, i] : path, state))
+  }
   if (node !== null && typeof node === 'object') {
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
       const p = marks ? [...path, k] : path
-      const ignored = isIgnored(k, p, ignore, marks)
-      let nk = !ignored && mode === 'keys' ? fn(k) : k
+      // 近い方優先: このキーの判定が無ければ、親の状態を引き継ぐ
+      const own = stateOf(state, verdict(k, p, ignore, marks))
+      let nk = mode === 'keys' && isActive(own, marks) ? fn(k) : k
       if (hasOwn(out, nk)) nk = k
       while (hasOwn(out, nk)) nk += '_'
-      put(out, nk, ignored ? v : walk(v, mode, ignore, fn, marks, p))
+      put(out, nk, walk(v, mode, ignore, fn, marks, p, own))
     }
     return out
   }

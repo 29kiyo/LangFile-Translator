@@ -7,7 +7,8 @@ import type { LangPicker } from './langpicker'
 import { getLanguage } from '@shared/languages'
 import { outputPath } from '@shared/outname'
 import { initResults } from './results'
-import { isIgnoredId, pathId, type KeyEntry, type Marks } from '@shared/keyscan'
+import { pathId, verdictOf, type KeyEntry, type Marks, type MarksPayload, type Own } from '@shared/keyscan'
+import type { KeyMode } from '@shared/types'
 import type { Untranslated } from '@shared/untranslated'
 import {
   csvColumnNames,
@@ -128,6 +129,12 @@ $('btn-pick').addEventListener('click', async () => {
   // --- 翻訳 (phase4) ---
   const trMode = $<HTMLSelectElement>('tr-mode')
   const trIgnore = $<HTMLInputElement>('tr-ignore')
+  const trOnly = $<HTMLInputElement>('tr-only')
+  const trKey = $<HTMLSelectElement>('tr-keymode')
+  const keyMode = (): KeyMode => {
+    const v = trKey.value
+    return v === 'only' || v === 'both' ? v : 'ignore'
+  }
   const trStatus = $('tr-status')
   const btnTr = $<HTMLButtonElement>('btn-translate')
   const btnCancel = $<HTMLButtonElement>('btn-cancel')
@@ -136,10 +143,25 @@ $('btn-pick').addEventListener('click', async () => {
   void window.api.getSettings().then((s) => {
     trMode.value = s.translateMode
     trIgnore.value = s.ignoreKeys
+    trOnly.value = s.onlyKeys
+    trKey.value = s.keyMode
+    applyKeyMode()
     refreshFixed()
   })
   trMode.addEventListener('change', () => void window.api.setSettings({ translateMode: modeValue() }))
   trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
+  trOnly.addEventListener('change', () => void window.api.setSettings({ onlyKeys: trOnly.value }))
+  trOnly.addEventListener('input', () => {
+    updateConflict()
+    redraw()
+    renderCsv()
+  })
+  trKey.addEventListener('change', () => {
+    void window.api.setSettings({ keyMode: keyMode() })
+    applyKeyMode()
+    redraw()
+    renderCsv()
+  })
 
   window.api.onTranslateProgress((p) => {
     trStatus.textContent = `${res.prefix()}${t('tr.progress')} ${p.done}/${p.total}`
@@ -175,7 +197,7 @@ $('btn-pick').addEventListener('click', async () => {
     const r = await window.api.translate({
       text: src,
       mode: modeValue(),
-      ignoreKeys: trIgnore.value,
+      ignoreKeys: [...keyList()].join(','),
       marks: marksPayload(),
       format: fmt,
       from: 'auto',
@@ -192,7 +214,7 @@ $('btn-pick').addEventListener('click', async () => {
         format: fmt,
         mode: modeValue(),
         ignore: keyList(),
-        marks: { marked: new Set(marks.marked), released: new Set(marks.released) }
+        marks: snap()
       }
       refreshUn()
       trStatus.textContent =
@@ -208,23 +230,58 @@ $('btn-pick').addEventListener('click', async () => {
   //  - 一覧にないキー: 点をクリックした行だけが対象 (marked)
   // 判定規則は shared/keyscan.ts (翻訳エンジンと共通)。点の状態はセッション中のみ保持する
   const marks = { marked: new Set<string>(), released: new Set<string>() }
-  const keyList = (): Set<string> =>
+  const parse = (v: string): Set<string> =>
     new Set(
-      trIgnore.value
+      v
         .split(',')
         .map((s) => s.trim())
         .filter(Boolean)
     )
+  // モードに合わせて、使わない側の入力バーは空として扱う
+  const keyList = (): Set<string> => (keyMode() === 'only' ? new Set<string>() : parse(trIgnore.value))
+  const onlyList = (): Set<string> => (keyMode() === 'ignore' ? new Set<string>() : parse(trOnly.value))
+  /** 現在の判定条件 (行の点 + 翻訳するキー)。青が1つでもあれば restrict */
+  const live = (): Marks => {
+    const only = onlyList()
+    return {
+      marked: marks.marked,
+      released: marks.released,
+      only,
+      restrict: keyMode() !== 'ignore' && (only.size > 0 || marks.released.size > 0)
+    }
+  }
+  const snap = (): Marks => {
+    const m = live()
+    return { ...m, marked: new Set(m.marked), released: new Set(m.released) }
+  }
+  const updateConflict = (): void => {
+    const box = $('tr-conflict')
+    const o = parse(trOnly.value)
+    const both = keyMode() === 'both' ? [...parse(trIgnore.value)].filter((k) => o.has(k)) : []
+    box.hidden = both.length === 0
+    box.textContent = both.length ? t('tr.conflict').replace('{keys}', both.join(', ')) : ''
+  }
+  const applyKeyMode = (): void => {
+    const m = keyMode()
+    trIgnore.hidden = m === 'only'
+    $('lb-ignore').hidden = m === 'only'
+    trOnly.hidden = m === 'ignore'
+    $('lb-only').hidden = m === 'ignore'
+    updateConflict()
+  }
+  document.addEventListener('i18n-changed', updateConflict)
   const clearMarks = (): void => {
     marks.marked.clear()
     marks.released.clear()
     lastCtx = null
     dismissed.clear()
   }
-  const marksPayload = (): { marked: string[]; released: string[] } | undefined =>
-    marks.marked.size || marks.released.size
-      ? { marked: [...marks.marked], released: [...marks.released] }
+  const marksPayload = (): MarksPayload | undefined => {
+    const m = live()
+    return m.marked.size || m.released.size || m.only?.size
+      ? { marked: [...m.marked], released: [...m.released], only: [...(m.only ?? [])], restrict: m.restrict }
       : undefined
+  }
 
   // 行 -> その行のキー (1行にキーがちょうど1つの行だけ。minify 形式などは点なし)
   let lineEntries = new Map<number, KeyEntry>()
@@ -239,11 +296,13 @@ $('btn-pick').addEventListener('click', async () => {
     for (const [ln, a] of byLine) if (a.length === 1) lineEntries.set(ln, a[0])
   }
 
-  const dot = (line: number, key: string, on: boolean): monaco.editor.IModelDeltaDecoration => ({
+  const tip = (blue: boolean, fixed: boolean): string =>
+    blue ? (fixed ? t('ign.onlyOn') : t('ign.onlyAdd')) : fixed ? t('ign.remove') : t('ign.add')
+  const dot = (line: number, key: string, blue: boolean, fixed: boolean): monaco.editor.IModelDeltaDecoration => ({
     range: new monaco.Range(line, 1, line, 1),
     options: {
-      glyphMarginClassName: on ? 'ign-dot' : 'ign-dot hover',
-      glyphMarginHoverMessage: { value: `${t(on ? 'ign.remove' : 'ign.add')}: \`${key.replace(/`/g, "'")}\`` }
+      glyphMarginClassName: `ign-dot${blue ? ' blue' : ''}${fixed ? '' : ' hover'}`,
+      glyphMarginHoverMessage: { value: `${tip(blue, fixed)}: \`${key.replace(/`/g, "'")}\`` }
     }
   })
 
@@ -254,12 +313,18 @@ $('btn-pick').addEventListener('click', async () => {
   const drawFixed = (): void => {
     const ign = keyList()
     const list: monaco.editor.IModelDeltaDecoration[] = []
-    for (const [ln, e] of lineEntries) if (isIgnoredId(e.key, e.id, ign, marks)) list.push(dot(ln, e.key, true))
+    const m = live()
+    for (const [ln, e] of lineEntries) {
+      const v = verdictOf(e.key, e.id, ign, m)
+      if (v) list.push(dot(ln, e.key, v === 'translate', true))
+    }
     fixedDeco.set(list)
   }
   const drawHover = (): void => {
     const e = lineEntries.get(hoverLine)
-    hoverDeco.set(e && !isIgnoredId(e.key, e.id, keyList(), marks) ? [dot(hoverLine, e.key, false)] : [])
+    hoverDeco.set(
+      e && !verdictOf(e.key, e.id, keyList(), live()) ? [dot(hoverLine, e.key, keyMode() === 'only', false)] : []
+    )
   }
   const redraw = (): void => {
     drawFixed()
@@ -274,18 +339,34 @@ $('btn-pick').addEventListener('click', async () => {
     renderCsv()
   }
 
+  type Show = 'none' | 'red' | 'blue'
+  const showOf = (v: Own): Show => (v === 'ignore' ? 'red' : v === 'translate' ? 'blue' : 'none')
+  /** 行 (出現位置) の点を次の状態へ進める。入力バーで決まっている行は、赤と青を交互に切り替える */
+  const cycleRow = (key: string, id: string): void => {
+    const ign = keyList()
+    const bar = verdictOf(key, id, ign, { marked: new Set(), released: new Set(), only: onlyList() })
+    const now = showOf(verdictOf(key, id, ign, live()))
+    const m = keyMode()
+    const order: Show[] =
+      bar === 'ignore'
+        ? ['red', 'blue']
+        : bar === 'translate'
+          ? ['blue', 'red']
+          : m === 'ignore'
+            ? ['none', 'red']
+            : m === 'only'
+              ? ['none', 'blue']
+              : ['none', 'red', 'blue']
+    const next = order[(order.indexOf(now) + 1) % order.length]
+    marks.marked.delete(id)
+    marks.released.delete(id)
+    if (next === 'red' && bar !== 'ignore') marks.marked.add(id)
+    if (next === 'blue' && bar !== 'translate') marks.released.add(id)
+  }
   const toggleLine = (line: number): void => {
     const e = lineEntries.get(line)
     if (!e) return
-    const ign = keyList()
-    const on = isIgnoredId(e.key, e.id, ign, marks)
-    if (ign.has(e.key)) {
-      // 一覧のキー: その行だけ外す / 戻す
-      marks.marked.delete(e.id)
-      if (on) marks.released.add(e.id)
-      else marks.released.delete(e.id)
-    } else if (on) marks.marked.delete(e.id)
-    else marks.marked.add(e.id)
+    cycleRow(e.key, e.id)
     redraw()
   }
 
@@ -293,30 +374,34 @@ $('btn-pick').addEventListener('click', async () => {
   const csvBar = $('csv-bar')
   const csvCols = $('csv-cols')
   const csvHeaderChk = $<HTMLInputElement>('csv-header')
-  const toggleCol = (name: string): void => {
+  const colActive = (name: string): boolean => {
+    const m = live()
+    const v = verdictOf(name, pathId([name]), keyList(), m)
+    return v === 'translate' || (v === undefined && !m.restrict)
+  }
+  const toggleCol = (name: string, on: boolean): void => {
     const id = pathId([name])
-    const ign = keyList()
-    const on = isIgnoredId(name, id, ign, marks)
-    if (ign.has(name)) {
+    if (on) {
       marks.marked.delete(id)
-      if (on) marks.released.add(id)
-      else marks.released.delete(id)
-    } else if (on) marks.marked.delete(id)
-    else marks.marked.add(id)
+      if (!colActive(name)) marks.released.add(id)
+    } else {
+      marks.released.delete(id)
+      if (colActive(name)) marks.marked.add(id)
+    }
+    renderCsv()
   }
   const renderCsv = (): void => {
     const f = fmtOr()
     csvBar.hidden = !isCsv(f)
     csvCols.replaceChildren()
     if (!isCsv(f)) return
-    const ign = keyList()
     for (const name of csvColumnNames(f, left.getValue())) {
       const lab = document.createElement('label')
       lab.className = 'csv-col'
       const cb = document.createElement('input')
       cb.type = 'checkbox'
-      cb.checked = !isIgnoredId(name, pathId([name]), ign, marks)
-      cb.addEventListener('change', () => toggleCol(name))
+      cb.checked = colActive(name)
+      cb.addEventListener('change', () => toggleCol(name, cb.checked))
       const sp = document.createElement('span')
       sp.textContent = name
       lab.append(cb, sp)
@@ -461,7 +546,7 @@ $('btn-pick').addEventListener('click', async () => {
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,
-    getOptions: () => ({ mode: modeValue(), ignoreKeys: trIgnore.value, marks: marksPayload(), format: fmtOr() })
+    getOptions: () => ({ mode: modeValue(), ignoreKeys: [...keyList()].join(','), marks: marksPayload(), format: fmtOr() })
   })
 
   // 結果一覧 (res) の初期化より後で、ピッカーの変更とモードを結び付ける

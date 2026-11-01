@@ -15,6 +15,7 @@ import {
 } from '@shared/types'
 import { translateJson } from './translate/engine'
 import { isLocaleCode } from '@shared/locale-file'
+import { toMarks } from '@shared/keyscan'
 import { makeZip } from './zip'
 import { migrateUserData } from './migrate'
 import iconIco from '../../build/icon.ico?asset'
@@ -168,7 +169,7 @@ async function runTranslate(req: TranslateRequest): Promise<TranslateResult> {
       mode: req.mode,
       ignoreKeys: req.ignoreKeys,
       format: req.format,
-      marks: req.marks && { marked: new Set(req.marks.marked), released: new Set(req.marks.released) },
+      marks: req.marks && toMarks(req.marks),
       from: req.from,
       to: req.to,
       signal: ac.signal,

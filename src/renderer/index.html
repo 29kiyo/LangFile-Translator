@@ -47,8 +47,17 @@
               <option value="structure" data-i18n="tr.mode.structure"></option>
               <option value="keys" data-i18n="tr.mode.keys"></option>
             </select>
-            <label for="tr-ignore" data-i18n="tr.ignore"></label>
+            <label for="tr-keymode" data-i18n="tr.keymode"></label>
+            <select id="tr-keymode">
+              <option value="ignore" data-i18n="tr.keymode.ignore"></option>
+              <option value="only" data-i18n="tr.keymode.only"></option>
+              <option value="both" data-i18n="tr.keymode.both"></option>
+            </select>
+            <label id="lb-ignore" for="tr-ignore" data-i18n="tr.ignore"></label>
             <input id="tr-ignore" type="text" placeholder="id,url" />
+            <label id="lb-only" for="tr-only" data-i18n="tr.only"></label>
+            <input id="tr-only" type="text" placeholder="title,text" />
+            <span id="tr-conflict" hidden></span>
             <button id="btn-translate" data-i18n="tr.run"></button>
             <button id="btn-cancel" data-i18n="tr.cancel" hidden></button>
             <span id="tr-status"></span>

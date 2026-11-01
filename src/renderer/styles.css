@@ -766,3 +766,15 @@ input[type='checkbox'].switch:checked::after {
   gap: 4px;
   cursor: pointer;
 }
+
+/* 行マーカー (翻訳するキー): 青い点 */
+.ign-dot.blue::before {
+  background: #3b82f6;
+}
+#tr-only {
+  width: 180px;
+}
+#tr-conflict {
+  font-size: 12px;
+  color: var(--warn);
+}

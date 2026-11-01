@@ -1,7 +1,7 @@
 import type { Mode } from './translate-core.ts'
 import { isTranslatable, protect } from './translate-core.ts'
 import type { KeyPath, Marks } from './keyscan.ts'
-import { isIgnored, scanStrings } from './keyscan.ts'
+import { isActive, scanStrings, stateOf, verdict, type Own } from './keyscan.ts'
 
 export { parseIgnoreKeys } from './translate-core.ts'
 
@@ -39,20 +39,20 @@ function sourceTokens(
   node: unknown,
   ignore: Set<string>,
   marks: Marks | undefined,
-  parentIgnored: boolean,
+  state: Own,
   path: KeyPath,
   out: Tok[]
 ): void {
   if (typeof node === 'string') {
-    out.push({ kind: 'value', text: node, ignored: parentIgnored })
+    out.push({ kind: 'value', text: node, ignored: !isActive(state, marks) })
   } else if (Array.isArray(node)) {
-    node.forEach((n, i) => sourceTokens(n, ignore, marks, parentIgnored, marks ? [...path, i] : path, out))
+    node.forEach((n, i) => sourceTokens(n, ignore, marks, state, marks ? [...path, i] : path, out))
   } else if (node !== null && typeof node === 'object') {
     for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
       const p = marks ? [...path, k] : path
-      const ign = parentIgnored || isIgnored(k, p, ignore, marks)
-      out.push({ kind: 'key', text: k, ignored: ign })
-      sourceTokens(v, ignore, marks, ign, p, out)
+      const own = stateOf(state, verdict(k, p, ignore, marks))
+      out.push({ kind: 'key', text: k, ignored: !isActive(own, marks) })
+      sourceTokens(v, ignore, marks, own, p, out)
     }
   }
 }
@@ -76,7 +76,7 @@ export function findUntranslated(
     return []
   }
   const src: Tok[] = []
-  sourceTokens(json, ignore, marks, false, [], src)
+  sourceTokens(json, ignore, marks, undefined, [], src)
   const out = scanStrings(output)
   if (src.length !== out.length) return []
   const res: Untranslated[] = []

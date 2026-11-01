@@ -5,6 +5,10 @@ export interface Marks {
   marked: Set<string>
   /** 無視キーの一覧に載っていても、個別に翻訳対象へ戻す出現位置 */
   released: Set<string>
+  /** 入力バーの「翻訳するキー」 */
+  only?: Set<string>
+  /** 翻訳する (青) の指定があるとき true。決まっていない値は翻訳しない */
+  restrict?: boolean
 }
 
 export const pathId = (p: KeyPath): string => JSON.stringify(p)
@@ -13,9 +17,31 @@ export const pathId = (p: KeyPath): string => JSON.stringify(p)
  * 無視するかの判定 (翻訳エンジンと画面で共通)。
  * 一覧にあるキーは released 以外の全てを無視、一覧にないキーは marked の出現位置だけを無視する
  */
+export type Own = 'ignore' | 'translate' | undefined
+
+/** 1つの出現位置の判定。行の点 (marked / released) > 入力バー (同じキーが両方にあれば「翻訳しない」が勝つ)。決まらなければ undefined */
+export function verdictOf(key: string, id: string, ignore: Set<string>, marks?: Marks): Own {
+  if (marks) {
+    if (marks.marked.has(id)) return 'ignore'
+    if (marks.released.has(id)) return 'translate'
+  }
+  if (ignore.has(key)) return 'ignore'
+  if (marks?.only?.has(key)) return 'translate'
+  return undefined
+}
+
+export function verdict(key: string, path: KeyPath, ignore: Set<string>, marks?: Marks): Own {
+  return verdictOf(key, marks ? pathId(path) : '', ignore, marks)
+}
+
+/** 近い方優先: 自分の判定が無ければ、親の状態を引き継ぐ */
+export const stateOf = (parent: Own, own: Own): Own => own ?? parent
+
+/** 翻訳するか。決まっていないときは、翻訳する指定 (青) があれば翻訳しない */
+export const isActive = (s: Own, marks?: Marks): boolean => s === 'translate' || (s === undefined && !marks?.restrict)
+
 export function isIgnoredId(key: string, id: string, ignore: Set<string>, marks?: Marks): boolean {
-  if (!marks) return ignore.has(key)
-  return ignore.has(key) ? !marks.released.has(id) : marks.marked.has(id)
+  return verdictOf(key, id, ignore, marks) === 'ignore'
 }
 
 export function isIgnored(key: string, path: KeyPath, ignore: Set<string>, marks?: Marks): boolean {
@@ -125,3 +151,18 @@ export function scanKeys(text: string): KeyEntry[] {
   }
   return out
 }
+
+/** main へ渡す形 (行の点と、翻訳するキー) */
+export interface MarksPayload {
+  marked: string[]
+  released: string[]
+  only?: string[]
+  restrict?: boolean
+}
+
+export const toMarks = (p: MarksPayload): Marks => ({
+  marked: new Set(p.marked),
+  released: new Set(p.released),
+  only: new Set(p.only ?? []),
+  restrict: !!p.restrict
+})

@@ -1,5 +1,5 @@
 import type { KeyEntry, Marks } from '../keyscan.ts'
-import { isIgnoredId, scanKeys, scanStrings } from '../keyscan.ts'
+import { isActive, scanKeys, scanStrings, stateOf, verdict, verdictOf, type Own } from '../keyscan.ts'
 import type { Mode } from '../translate-core.ts'
 import { isTranslatable } from '../translate-core.ts'
 import { applyReplacements } from '../textedit.ts'
@@ -92,7 +92,7 @@ export interface Plan {
 export function planSegments(format: FormatId, text: string, ignore: Set<string>, marks?: Marks): Plan | null {
   const fmt = SEGMENT[format]
   if (!fmt) return null
-  const active = fmt.scan(text).filter((e) => !e.skip && !isIgnoredId(e.key, e.id, ignore, marks) && isTranslatable(e.text))
+  const active = fmt.scan(text).filter((e) => !e.skip && entryActive(e, ignore, marks) && isTranslatable(e.text))
   return {
     texts: [...new Set(active.map((e) => e.text))],
     build: (m) =>
@@ -149,7 +149,7 @@ export function findUntranslatedFor(
     const s = src[i]
     const o = out[i]
     if (s.key !== o.key) return []
-    if (s.skip || isIgnoredId(s.key, s.id, ign, marks) || dismissed?.has(i)) continue
+    if (s.skip || !entryActive(s, ign, marks) || dismissed?.has(i)) continue
     if (s.text !== o.text || !needsTranslation(s.text)) continue
     res.push({ line: o.line, idx: i, kind: 'value', source: s.text, startCol: o.startCol, endCol: o.endCol })
   }
@@ -176,3 +176,15 @@ export function csvColumnNames(f: FormatId, text: string): string[] {
 
 /** 出力ファイルの既定の拡張子 */
 export const extFor = (f: FormatId): string => (isCsv(f) ? f.slice(0, 3) : f)
+
+/** 1件が翻訳対象か。パスの親から順に「近い方優先」で判定する (行の点 > 入力バー) */
+function entryActive(e: Entry, ignore: Set<string>, marks?: Marks): boolean {
+  let own: Own
+  const p = e.path
+  for (let i = 0; i < p.length - 1; i++) {
+    const k = p[i]
+    if (typeof k === 'string') own = stateOf(own, verdict(k, p.slice(0, i + 1), ignore, marks))
+  }
+  own = stateOf(own, verdictOf(e.key, e.id, ignore, marks))
+  return isActive(own, marks)
+}

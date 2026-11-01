@@ -3,7 +3,7 @@ import { getLanguage } from '@shared/languages'
 import { outputPath } from '@shared/outname'
 import type { BulkFile } from '@shared/types'
 import { nativeName } from './langpicker'
-import type { Marks } from '@shared/keyscan'
+import { toMarks, type Marks, type MarksPayload } from '@shared/keyscan'
 import { parseIgnoreKeys, type Untranslated } from '@shared/untranslated'
 import { findUntranslatedFor, type FormatId } from '@shared/formats/index'
 import { renderUntranslated, uniqueLines } from './unview'
@@ -35,7 +35,7 @@ export interface ResultsDeps {
   getOptions(): {
     mode: 'structure' | 'keys'
     ignoreKeys: string
-    marks?: { marked: string[]; released: string[] }
+    marks?: MarksPayload
     format: FormatId
   }
 }
@@ -350,7 +350,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
       format: opt.format,
       mode: opt.mode,
       ignore: parseIgnoreKeys(opt.ignoreKeys),
-      marks: opt.marks && { marked: new Set(opt.marks.marked), released: new Set(opt.marks.released) }
+      marks: opt.marks && toMarks(opt.marks)
     }
     const next: Result[] = []
     for (const code of codes) {
