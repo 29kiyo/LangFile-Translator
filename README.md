@@ -143,6 +143,18 @@ Builds and releases are done with GitHub Actions (`.github/workflows/build.yml`)
 
 ## 更新履歴 / Changelog
 
+### v2.1.0
+
+- キー指定モードを追加: 「無視キーのみ / 翻訳するキーのみ / 併用」。行番号横の点は、赤 = 翻訳しない、青 = 翻訳する。階層は近い方の指定が優先され、同じキーが両方に入っている場合は「翻訳しない」が優先される
+- 「元のファイル名で保存」のスイッチを追加 (複数言語のときは、言語コードのフォルダに分けて保存)
+- 一括ダウンロードに「フォルダ (ZIP と同じ構成)」を追加
+
+English:
+
+- Added key modes: "Ignore keys only / Translate keys only / Both". The dot next to the line number is red = don't translate, blue = translate. The nearest setting in the hierarchy wins, and a key in both lists is not translated
+- Added a "Save with the original file name" switch (with several languages, files are saved in one folder per language code)
+- Added "Folder (same layout as the ZIP)" to the bulk download methods
+
 ### v2.0.0
 
 - 対応するファイル形式を追加: ARB、INI、.properties / .lang、CSV / TSV (翻訳する列を選べる)、YAML、PO / POT、Android の strings.xml (`values-ja/strings.xml` の形で保存)
