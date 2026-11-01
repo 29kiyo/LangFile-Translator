@@ -74,7 +74,12 @@ export function androidDir(l: Language): string {
 }
 
 /** 保存する相対パス。Android は values-ja/strings.xml、それ以外は outputName */
-export function outputPath(srcName: string, l: Language, format: FormatId): string {
+export function outputPath(srcName: string, l: Language, format: FormatId, keep = false, multi = false): string {
   if (format === 'xml') return `${androidDir(l)}/strings.xml`
+  if (keep && srcName) {
+    const name = srcName.replace(/\.pot$/i, '.po')
+    // 複数言語は、同じ名前が重ならないよう、言語コードのフォルダに分ける
+    return multi ? `${l.code}/${name}` : name
+  }
   return outputName(srcName, l, extFor(format))
 }

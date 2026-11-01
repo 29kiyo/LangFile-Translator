@@ -114,7 +114,7 @@ $('btn-pick').addEventListener('click', async () => {
     const code = lastCtx?.to ?? picker.selected()[0]
     const l = code ? getLanguage(code) : undefined
     if (!l) return currentName || 'output.json'
-    return outputPath(currentName, l, lastCtx?.format ?? 'json')
+    return outputPath(currentName, l, lastCtx?.format ?? 'json', trKeep.checked)
   }
   $('btn-download').addEventListener('click', async () => {
     const text = right.getValue()
@@ -131,6 +131,7 @@ $('btn-pick').addEventListener('click', async () => {
   const trIgnore = $<HTMLInputElement>('tr-ignore')
   const trOnly = $<HTMLInputElement>('tr-only')
   const trKey = $<HTMLSelectElement>('tr-keymode')
+  const trKeep = $<HTMLInputElement>('tr-keepname')
   const keyMode = (): KeyMode => {
     const v = trKey.value
     return v === 'only' || v === 'both' ? v : 'ignore'
@@ -145,11 +146,13 @@ $('btn-pick').addEventListener('click', async () => {
     trIgnore.value = s.ignoreKeys
     trOnly.value = s.onlyKeys
     trKey.value = s.keyMode
+    trKeep.checked = s.keepName
     applyKeyMode()
     refreshFixed()
   })
   trMode.addEventListener('change', () => void window.api.setSettings({ translateMode: modeValue() }))
   trIgnore.addEventListener('change', () => void window.api.setSettings({ ignoreKeys: trIgnore.value }))
+  trKeep.addEventListener('change', () => void window.api.setSettings({ keepName: trKeep.checked }))
   trOnly.addEventListener('change', () => void window.api.setSettings({ onlyKeys: trOnly.value }))
   trOnly.addEventListener('input', () => {
     updateConflict()
@@ -546,7 +549,7 @@ $('btn-pick').addEventListener('click', async () => {
   const res = initResults(t, {
     getSource: () => left.getValue(),
     getSourceName: () => currentName,
-    getOptions: () => ({ mode: modeValue(), ignoreKeys: [...keyList()].join(','), marks: marksPayload(), format: fmtOr() })
+    getOptions: () => ({ mode: modeValue(), ignoreKeys: [...keyList()].join(','), marks: marksPayload(), format: fmtOr(), keepName: trKeep.checked })
   })
 
   // 結果一覧 (res) の初期化より後で、ピッカーの変更とモードを結び付ける

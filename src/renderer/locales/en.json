@@ -51,6 +51,7 @@
   "tr.mode.keys": "Translate keys too",
   "tr.ignore": "Ignore keys",
   "tr.only": "Translate keys",
+  "tr.keepName": "Save with the original file name",
   "tr.keymode": "Key mode",
   "tr.keymode.ignore": "Ignore keys only",
   "tr.keymode.only": "Translate keys only",

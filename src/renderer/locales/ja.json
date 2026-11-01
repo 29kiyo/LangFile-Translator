@@ -51,6 +51,7 @@
   "tr.mode.keys": "キーも翻訳",
   "tr.ignore": "無視キー",
   "tr.only": "翻訳するキー",
+  "tr.keepName": "元のファイル名で保存",
   "tr.keymode": "キー指定",
   "tr.keymode.ignore": "無視キーのみ",
   "tr.keymode.only": "翻訳するキーのみ",

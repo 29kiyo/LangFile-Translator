@@ -33,3 +33,14 @@ test('言語コードが無い名前は ja_jp の形', () => {
   assert.equal(outputName('', L('ja'), 'arb'), 'ja_jp.arb')
   assert.equal(outputName('', L('ja')), 'ja_jp.json')
 })
+
+import { outputPath } from '../src/shared/outname.ts'
+
+test('元のファイル名で保存 (単体は同じ名前、複数言語は言語フォルダ、.pot は .po)', () => {
+  assert.equal(outputPath('en_US.json', L('ja'), 'json', true), 'en_US.json')
+  assert.equal(outputPath('en_US.json', L('ja'), 'json', true, true), 'ja/en_US.json')
+  assert.equal(outputPath('app.pot', L('ja'), 'po', true), 'app.po')
+  assert.equal(outputPath('strings.xml', L('ja'), 'xml', true, true), 'values-ja/strings.xml')
+  assert.equal(outputPath('', L('ja'), 'json', true), 'ja_jp.json')
+  assert.equal(outputPath('en_US.json', L('ja'), 'json', false), 'ja_JP.json')
+})

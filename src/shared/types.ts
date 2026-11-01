@@ -116,6 +116,8 @@ export interface Settings {
   /** 翻訳するキー (カンマ区切り) */
   onlyKeys: string
   keyMode: KeyMode
+  /** 出力を元のファイル名で保存する */
+  keepName: boolean
   bulkMethod: BulkMethod
   /** 表示言語ファイルの追加後、元のファイルを削除するか */
   deleteImported: DeleteImported
@@ -134,6 +136,7 @@ export const DEFAULT_SETTINGS: Settings = {
   ignoreKeys: '',
   onlyKeys: '',
   keyMode: 'ignore',
+  keepName: false,
   bulkMethod: 'zip',
   deleteImported: 'ask',
   targetLangs: ['ja']

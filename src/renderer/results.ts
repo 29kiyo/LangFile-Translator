@@ -36,6 +36,7 @@ export interface ResultsDeps {
     mode: 'structure' | 'keys'
     ignoreKeys: string
     marks?: MarksPayload
+    keepName?: boolean
     format: FormatId
   }
 }
@@ -355,7 +356,7 @@ export function initResults(t: (key: string) => string, deps: ResultsDeps): Resu
     const next: Result[] = []
     for (const code of codes) {
       const l = getLanguage(code)
-      if (l) next.push({ code, file: outputPath(deps.getSourceName(), l, opt.format), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
+      if (l) next.push({ code, file: outputPath(deps.getSourceName(), l, opt.format, !!opt.keepName, true), status: 'pending', text: '', warnings: 0, message: '', unt: [], dismissed: new Set() })
     }
     results = next
     openIdx = -1
