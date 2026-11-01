@@ -66,7 +66,7 @@ export interface TranslateProgress {
   total: number
 }
 
-export type BulkMethod = 'zip' | 'folder'
+export type BulkMethod = 'zip' | 'folder' | 'tree'
 
 export interface BulkFile {
   name: string

@@ -121,5 +121,6 @@
   "res.applied": "Saved (used for downloads)",
   "res.unsaved": "unsaved edits are not included",
   "settings.bulkMethod": "Bulk download",
-  "settings.bulk.folder": "Files into the output folder"
+  "settings.bulk.folder": "Files into the output folder",
+  "settings.bulk.tree": "Folder (same layout as the ZIP)"
 }

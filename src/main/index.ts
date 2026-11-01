@@ -290,6 +290,22 @@ app.whenReady().then(() => {
       logCommand(`write zip ${p} (${files.length} files)`)
       return { path: p, count: files.length }
     }
+    if (settings.bulkMethod === 'tree') {
+      // ZIP を展開した状態と同じ構成のフォルダを、出力先の中に作る (同名フォルダは連番)
+      const folder = safeParts(zipName.replace(/\.zip$/i, '')).join('_') || 'translations'
+      let root = join(dir, folder)
+      for (let i = 1; existsSync(root); i++) root = join(dir, `${folder} (${i})`)
+      for (const f of files) {
+        const parts = safeParts(f.name)
+        const file = parts.pop() || 'output'
+        const sub = join(root, ...parts)
+        mkdirSync(sub, { recursive: true })
+        const p = join(sub, file)
+        writeFileSync(p, f.content, 'utf-8')
+        logCommand(`write file ${p}`)
+      }
+      return { path: root, count: files.length }
+    }
     for (const f of files) {
       const p = uniqueRel(dir, f.name)
       writeFileSync(p, f.content, 'utf-8')
